@@ -1,0 +1,10 @@
+syntax: glob
+.*.swp
+libav/
+localforage.min.js
+FileSaver.min.js
+ennuizel.js
+ennuizel.min.js
+node_modules/
+bower_components/
+package-lock.json

@@ -1,0 +1,102 @@
+body {
+    background: #033;
+    color: #fff;
+    margin: 0px;
+}
+
+a {
+    color: #6ff;
+}
+
+.menu {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: #366;
+    padding: 0.5em;
+    border-bottom: 2px solid #fff;
+}
+
+.menuline {
+    padding-bottom: 0.5em;
+}
+
+.menuitem {
+    display: inline-block;
+    padding: 0.5em;
+    margin-right: 0.5em;
+    background: #033;
+    color: #fff;
+    border: 2px solid #fff;
+    border-radius: 0.5em;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.menuitem:hover {
+    background: #066;
+}
+
+.menuitem:active, .menuselected {
+    background: #099; 
+}
+
+.trackspace {
+    padding: 1em;
+}
+
+.trackcontainer {
+    white-space: nowrap;
+    padding-bottom: 1em;
+}
+
+.trackselected {
+    background: #366;
+}
+
+.trackheader {
+    display: inline-block;
+    width: 5em;
+    height: 124px;
+    overflow: auto;
+    border: 2px solid #fff;
+    text-align: center;
+}
+
+.trackdesc {
+    padding: 0.5em;
+}
+
+.trackpart {
+    width: 64px;
+    height: 128px;
+}
+
+.inputlabel {
+    display: inline-block;
+    width: 10em;
+    text-align: right;
+    margin-right: 1em;
+}
+
+.modalpop {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    max-width: 100%;
+    max-height: 100%;
+    overflow: auto;
+    background: rgba(0,0,0,0.5);
+}
+
+.modal {
+    position: fixed;
+    background: #033;
+    padding: 0.5em;
+    border: 2px solid #fff;
+    border-radius: 0.5em;
+    text-align: center;
+}
