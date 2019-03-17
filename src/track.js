@@ -678,7 +678,7 @@ function deleteTrack(track) {
         // Remove it from the project properties
         delete tracks[id];
         if (id in trackViews) {
-            trackSpace.removeChild(trackViews[id].container);
+            trackSpace.removeChild(trackViews[id].div);
             delete trackViews[id];
         }
         var idx = projectProperties.trackOrder.indexOf(id);
