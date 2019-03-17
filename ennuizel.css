@@ -51,6 +51,10 @@ a {
     padding-bottom: 1em;
 }
 
+.trackview {
+    display: inline-block;
+}
+
 .trackselected {
     background: #366;
 }

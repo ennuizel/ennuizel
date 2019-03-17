@@ -438,13 +438,15 @@ function updateTrackViews() {
     projectProperties.trackOrder.forEach(function(track) {
         // Create the view for it
         if (!(track in trackViews)) {
-            var container = mke(trackSpace, "div", {"class": "trackview"});
+            var trackDiv = mke(trackSpace, "div", {"class": "trackdiv"});
+            var container = mke(trackDiv, "span", {"class": "trackview"});
             var header = mke(container, "span", {"class": "trackheader"});
             var desc = mke(header, "div", {"class": "trackdesc"});
             var opts = mke(header, "button", {text: "Opt"});
             opts.style.width = "90%";
             var partsContainer = mke(container, "span");
             trackViews[track] = {
+                div: trackDiv,
                 container: container,
                 header: header,
                 desc: desc,
@@ -453,7 +455,7 @@ function updateTrackViews() {
                 parts: []
             };
         } else {
-            trackSpace.appendChild(trackViews[track].container);
+            trackSpace.appendChild(trackViews[track].div);
         }
         p = p.then(function() { return updateTrackView(tracks[track]) });
     });
