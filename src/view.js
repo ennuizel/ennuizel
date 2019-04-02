@@ -64,7 +64,7 @@ zoomer.style.maxWidth = "20em";
 zoomer.onchange = zoomer.oninput = doZoomer;
 
 var trackContainer = mke(body, "div", {"class": "trackcontainer"});
-var trackSpace = mke(trackContainer, "div", {"class": "trackspace", text: "This is the track space"});
+var trackSpace = mke(trackContainer, "div", {"class": "trackspace"});
 
 var modalPop = mke(body, "div", {"class": "modalpop"});
 var modalDialog = mke(body, "div", {"class": "modal", text: "Loading..."});
@@ -120,7 +120,7 @@ ez.modal = modal;
 function error(ex) {
     modalDialog.innerHTML = "";
 
-    mke(modalDialog, "div", {text: "EnnuiZel has encountered an error!\n\nDetails: " + ex + "\n\n" + ex.stack + "\n\n"});
+    mke(modalDialog, "div", {text: "Ennuizel has encountered an error!\n\nDetails: " + ex + "\n\n" + ex.stack + "\n\n"});
     var restart = mke(modalDialog, "button", {text: "Restart"});
     mke(modalDialog, "span", {text: "  "});
     var del = mke(modalDialog, "button", {text: "Delete project"});
