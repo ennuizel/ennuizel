@@ -172,7 +172,8 @@ function timestamp(time) {
 }
 
 // Import one or more tracks once we're already prepared in libav.js
-function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frameptrs, againCb) {
+function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frameptrs, opts) {
+    opts = opts || {};
     var tracks = [];
     var needFilter = [];
     var filterGraphs = {}, buffersrcCtxs = {}, buffersinkCtxs = {};
@@ -196,10 +197,10 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
             if (err !== -libav.EAGAIN && err !== libav.AVERROR_EOF)
                 throw new Error("Error reading: " + err);
 
-            if (err === -libav.EAGAIN && Object.keys(packets).length === 0 && againCb) {
+            if (err === -libav.EAGAIN && Object.keys(packets).length === 0 && opts.againCb) {
                 // Nothing to read, request more
-                return againCb().then(function() {
-                    return libav.ff_read_multi(fmt_ctx, pkts[0], null, maxReadSize);
+                return opts.againCb().then(function() {
+                    return libav.ff_read_multi(fmt_ctx, pkts[0], opts.devfile, maxReadSize);
                 }).then(handlePackets);
             }
 
@@ -248,7 +249,7 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
                             case libav.AV_SAMPLE_FMT_S16P:
                             case libav.AV_SAMPLE_FMT_S32P:
                             case libav.AV_SAMPLE_FMT_FLTP:
-                                needFilter[si] = false;
+                                needFilter[si] = ("filter" in opts);
                                 break;
 
                             default:
@@ -256,7 +257,7 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
                                 break;
                         }
 
-                        if (!needFilter)
+                        if (!needFilter[si])
                             return null;
 
                         var channelLayout = frames[0].channelLayout;
@@ -273,7 +274,7 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
                             }
                         }
 
-                        return libav.ff_init_filter_graph("anull", {
+                        return libav.ff_init_filter_graph(opts.filter ? opts.filter : "anull", {
                             sample_rate: frames[0].sample_rate,
                             sample_fmt: frames[0].format,
                             channel_layout: channelLayout
@@ -330,14 +331,14 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
             // Either we're done, or we need to loop again
             if (err === -libav.EAGAIN) {
                 p = p.then(function() {
-                    return libav.ff_read_multi(fmt_ctx, pkts[0], null, maxReadSize).then(handlePackets);
+                    return libav.ff_read_multi(fmt_ctx, pkts[0], opts.devfile, maxReadSize).then(handlePackets);
                 });
             }
 
             return p;
         }
 
-        return libav.ff_read_multi(fmt_ctx, pkts[0], null, maxReadSize).then(handlePackets);
+        return libav.ff_read_multi(fmt_ctx, pkts[0], opts.devfile, maxReadSize).then(handlePackets);
 
     }).then(function() {
         // Free our filters
