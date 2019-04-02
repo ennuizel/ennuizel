@@ -157,6 +157,7 @@ ez.createProject = createProject;
 
 // Load an existing (or empty) project
 function loadProject() {
+    projectName = ez.projectName;
     modal("Loading...");
 
     menuTitle.innerText = "Project: " + projectName;
