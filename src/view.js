@@ -129,7 +129,7 @@ function error(ex) {
     restart.focus();
 
     restart.onclick = function() {
-        startup();
+        restart();
     };
     del.onclick = function() {
         deleteProjectDialog();
@@ -172,7 +172,7 @@ var menu = [
             },
             {
                 name: "Switch project",
-                on: startup
+                on: restart
             },
             {
                 name: "Delete project",

@@ -133,7 +133,7 @@ function newProjectDialog() {
 
         return createProject().catch(error);
 
-    }).catch(startup);
+    }).catch(restart);
 }
 
 // Create a project with name ez.projectName
@@ -233,7 +233,7 @@ function deleteProjectDialog() {
             deleteProject().then(res).catch(rej);
         };
         no.onclick = rej;
-    }).catch(function() { modal(); });
+    }).then(restart).catch(function() { modal(); });
 }
 
 // Delete the current project
@@ -253,6 +253,6 @@ function deleteProject() {
         // Now delete the database itself
         return dbCurrent.dropInstance();
 
-    }).then(startup);
+    });
 }
 ez.deleteProject = deleteProject;

@@ -109,7 +109,7 @@ Promise.all([]).then(function() {
     libav = LibAV;
 
     // Load any plugins
-    var p = Promise.all([]);
+    var p = Promise.resolve(true);
     if (ez.plugins) {
         ez.plugins.forEach(function(plugin) {
             p = p.then(plugin);
@@ -120,12 +120,21 @@ Promise.all([]).then(function() {
 
 }).catch(error);
 
-// Common startup/restart code
-function startup() {
+// Initial startup code
+function startup(full) {
     // Get our projects list
     if (!dbGlobal)
         ez.dbGlobal = dbGlobal = localforage.createInstance({name:"ennuizel-global"});
 
+    if (full)
+        return restart();
+    else
+        return Promise.all([]);
+}
+ez.startup = startup;
+
+// Common startup/restart code
+function restart() {
     return dbGlobal.getItem("projects").then(function(projects) {
 
         if (projects === null) projects = [];
