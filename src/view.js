@@ -69,6 +69,7 @@ var trackSpace = mke(trackContainer, "div", {"class": "trackspace"});
 var modalPop = mke(body, "div", {"class": "modalpop"});
 var modalDialog = mke(body, "div", {"class": "modal", text: "Loading..."});
 var modalVisible = true;
+ez.modalDialog = modalDialog;
 
 // Set all the elements to their correct locations/sizes
 function resetElements() {
