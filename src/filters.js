@@ -181,15 +181,16 @@ ez.applyLibAVFilter = applyLibAVFilter;
 
 // Mixing with various options
 function mixSimple() {
-    return mix(false);
+    return mix();
 }
 
 function mixLevel() {
-    return mix(true);
+    return mix("dynaudnorm", "dynaudnorm");
 }
 
 // The actual mixer
-function mix(level) {
+function mix(fin, fout) {
+    fin = fin || "anull";
     var outTrack;
     var filterGraph, srcCtxs, sinkCtx, frame;
     var descr, inp, outp;
@@ -216,19 +217,29 @@ function mix(level) {
         var ii = 0;
         var ct = 0;
         trackList.forEach(function() {
-            descr += "[in" + ii + "]" + (level?"dynaudnorm":"anull") + "[ain" + ii + "];";
+            descr += "[in" + ii + "]" + fin + "[ain" + ii + "];";
             mixpart += "[ain" + ii + "]";
             ii++;
             ct++;
 
             if (ct === 16) {
                 // Can't mix more than 16 at a time
-                descr += mixpart + "amix=16,alimiter=limit=0.0625[tmp" + ii + "];";
+                descr += mixpart + "amix=16,";
+                if (fout)
+                    descr += fout;
+                else
+                    descr += "alimiter=limit=0.0625";
+                descr += "[tmp" + ii + "];";
                 mixpart = "[tmp" + ii + "]";
                 ct = 1;
             }
         });
-        descr += mixpart + "amix=" + ct + ",alimiter=limit=" + (1/ct) + "[out]";
+        descr += mixpart + "amix=" + ct + ",";
+        if (fout)
+            descr += fout;
+        else
+            descr += "alimiter=limit=" + (1/ct);
+        descr += "[out]";
 
         // Create the input and output descriptors
         inp = [];
