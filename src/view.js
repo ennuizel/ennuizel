@@ -575,7 +575,7 @@ function updateTrackView(track) {
             z++;
             if (z >= pixLen) {
                 // End of a pixel, time to draw it
-                max = Math.ceil(Math.log2(max+1) / ln2 * 64);
+                max = Math.max(1, Math.ceil(Math.log2(max+1) / ln2 * 64));
                 ctx.fillRect(p, 64 - max, 1, max*2);
                 p++;
                 z = 0;
