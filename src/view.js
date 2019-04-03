@@ -192,6 +192,14 @@ var menu = [
             {
                 name: "Mix and level",
                 on: mixLevel
+            },
+            {
+                name: "Mix into new track",
+                on: mixSimpleKeep
+            },
+            {
+                name: "Mix and level into new track",
+                on: mixLevelKeep
             }
         ]
     }
@@ -477,12 +485,17 @@ function updateTrackView(track) {
 
     trackView.desc.innerText = track.name;
     track.selected = false;
-    trackView.header.onclick = function() {
-        var sel = track.selected = !track.selected;
+    trackView.select = function(sel) {
+        if (typeof sel === "undefined")
+            sel = !track.selected;
+        track.selected = sel;
         if (sel)
             outer.classList.add("trackselected");
         else
             outer.classList.remove("trackselected");
+    };
+    trackView.header.onclick = function() {
+        trackView.select();
     };
 
     // Set up the options menu
@@ -605,6 +618,20 @@ function updateTrackView(track) {
 
     return fetchTracks([track.id], {start: start, skip: skip, wholeParts: true}, drawPart).then(dbCacheFlush);
 }
+
+// Deselect all tracks
+function selectNone() {
+    projectProperties.trackOrder.forEach(function(trackId) {
+        selectTrack(trackId, false);
+    });
+}
+ez.selectNone = selectNone;
+
+// Select or deselect a track programmatically
+function selectTrack(track, sel) {
+    trackViews[track].select(sel);
+}
+ez.selectTrack = selectTrack;
 
 // Dialog to delete a track
 function deleteTrackDialog(track) {

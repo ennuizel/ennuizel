@@ -185,12 +185,27 @@ function mixSimple() {
 }
 
 function mixLevel() {
-    return mix("dynaudnorm", "dynaudnorm");
+    return mix({fin: "dynaudnorm", fout: "dynaudnorm"});
+}
+
+function mixSimpleKeep() {
+    return mix({keep: true}).then(function(track) {
+        selectNone();
+        selectTrack(track.id, true);
+    });
+}
+
+function mixLevelKeep() {
+    return mix({fin: "dynaudnorm", fout: "dynaudnorm", keep: true}).then(function(track) {
+        selectNone();
+        selectTrack(track.id, true);
+    });
 }
 
 // The actual mixer
-function mix(fin, fout) {
-    fin = fin || "anull";
+function mix(opts) {
+    opts = opts || {};
+    opts.fin = opts.fin || "anull";
     var outTrack;
     var filterGraph, srcCtxs, sinkCtx, frame;
     var descr, inp, outp;
@@ -217,7 +232,7 @@ function mix(fin, fout) {
         var ii = 0;
         var ct = 0;
         trackList.forEach(function() {
-            descr += "[in" + ii + "]" + fin + "[ain" + ii + "];";
+            descr += "[in" + ii + "]" + opts.fin + "[ain" + ii + "];";
             mixpart += "[ain" + ii + "]";
             ii++;
             ct++;
@@ -225,8 +240,8 @@ function mix(fin, fout) {
             if (ct === 16) {
                 // Can't mix more than 16 at a time
                 descr += mixpart + "amix=16,";
-                if (fout)
-                    descr += fout;
+                if (opts.fout)
+                    descr += opts.fout;
                 else
                     descr += "alimiter=limit=0.0625";
                 descr += "[tmp" + ii + "];";
@@ -235,8 +250,8 @@ function mix(fin, fout) {
             }
         });
         descr += mixpart + "amix=" + ct + ",";
-        if (fout)
-            descr += fout;
+        if (opts.fout)
+            descr += opts.fout;
         else
             descr += "alimiter=limit=" + (1/ct);
         descr += "[out]";
@@ -332,12 +347,17 @@ function mix(fin, fout) {
         ]);
 
         // Delete all the other tracks
-        trackList.forEach(function(trackId) {
-            p = p.then(function() { return deleteTrack(tracks[trackId]); });
-        });
+        if (!opts.keep) {
+            trackList.forEach(function(trackId) {
+                p = p.then(function() { return deleteTrack(tracks[trackId]); });
+            });
+        }
 
         return p;
 
-    }).then(dbCacheFlush).then(updateTrackViews).then(function() { modal(); });
+    }).then(dbCacheFlush).then(updateTrackViews).then(function() {
+        modal();
+        return outTrack;
+    });
 }
 ez.mix = mix;
