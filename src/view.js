@@ -81,6 +81,8 @@ function resetElements() {
     var h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     modalDialog.style.width = modalDialog.style.height = modalDialog.style.overflow = "";
 
+    modalDialog.style.left = modalDialog.style.top = "0px";
+
     if (modalDialog.offsetWidth > w || modalDialog.offsetHeight > h) {
         modalDialog.style.width = w + "px";
         modalDialog.style.height = h + "px";
