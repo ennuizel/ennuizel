@@ -865,7 +865,7 @@ function exportProject(name, format) {
                     return libav.ff_encode_multi(c, frame, pkt, frames, fin);
                 }).then(function(packets) {
                     // Mux it
-                    return libav.ff_write_multi(oc, pkt, packets);
+                    return libav.ff_write_multi(oc, pkt, packets, false);
                 }).then(function() {
                     // Wait for the write callbacks
                     return writep;
@@ -877,18 +877,27 @@ function exportProject(name, format) {
             return fetchTracks([track.id], {wholeParts: true}, handlePart);
 
         }).then(function() {
+            return libav.av_write_frame(oc, 0);
+
+        }).then(function() {
             return libav.av_write_trailer(oc);
 
         }).then(function() {
-            // We have now fully muxed the file. First free everything and wait for it to be ready
+            // We have now fully muxed the file. First free everything
             return Promise.all([
                 libav.ff_free_muxer(oc, pb),
                 libav.ff_free_encoder(c, frame, pkt),
                 libav.avfilter_graph_free_js(filterGraph),
-                libav.av_frame_free_js(fframe),
-                libav.unlink(trackName),
-                writep
+                libav.av_frame_free_js(fframe)
             ]);
+
+        }).then(function() {
+            // Wait for the writer
+            return writep;
+
+        }).then(function() {
+            // Then unlink the export file
+            return libav.unlink(trackName);
 
         }).then(function() {
             // Now stream it out
