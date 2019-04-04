@@ -717,6 +717,7 @@ function exportProjectDialog() {
     mke(modalDialog, "div", {text: "\n\n"});
 
     var cancel = mke(modalDialog, "button", {text: "Cancel"});
+    mke(modalDialog, "span", {text: "  "});
     var ok = mke(modalDialog, "button", {text: "Export"});
 
     modalToggle(true);
