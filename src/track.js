@@ -970,3 +970,4 @@ function exportProject(name, format) {
     });
     return p;
 }
+ez.exportProject = exportProject;

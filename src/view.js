@@ -242,9 +242,12 @@ function showMenu() {
                 "class": "menuitem",
                 text: item.name
             });
-            el.onclick = function() {
-                menuClick(item);
-            };
+            if (item.on)
+                el.onclick = item.on;
+            else
+                el.onclick = function() {
+                    menuClick(item);
+                };
         } else {
             el = item.el;
         }
@@ -261,7 +264,7 @@ function showSubmenu() {
     subMenu.innerHTML = "";
     menu.forEach(function(item) {
         var el;
-        if (!item.subel) {
+        if (!item.on && !item.subel) {
             el = item.subel = mke(null, "div", {"class": "submenu"});
             item.sub.forEach(function(subitem) {
                 var sel;
@@ -459,6 +462,9 @@ function doZoomer() {
     zoom();
 }
 
+// Allow plugins to force us to skip rendering entirely
+ez.skipRendering = false;
+
 // Update *all* of our track views
 function updateTrackViews() {
     // Start with a blank slate
@@ -503,7 +509,7 @@ function updateTrackView(track) {
     var outPart;
 
     var start = Math.max(
-        Math.min(track.parts.length, trackView.parts.length) - 1, 0);
+        Math.min(track.parts.length, trackView.parts.length), 0);
 
     trackView.desc.innerText = track.name;
     track.selected = false;
@@ -638,7 +644,11 @@ function updateTrackView(track) {
         return dbCacheSet("waveform-" + inPart.id, png);
     }
 
-    return fetchTracks([track.id], {start: start, skip: skip, wholeParts: true}, drawPart).then(dbCacheFlush);
+    if (ez.skipRendering) {
+        return dbCacheFlush();
+    } else {
+        return fetchTracks([track.id], {start: start, skip: skip, wholeParts: true}, drawPart).then(dbCacheFlush);
+    }
 }
 
 // Deselect all tracks
