@@ -479,7 +479,7 @@ function trackAppend(track, frame) {
                 return libav.ff_encode_multi(c, frm, pkt, data, true);
 
             }).then(function(packets) {
-                return libav.ff_write_multi(oc, pkt, packets);
+                return libav.ff_write_multi(oc, pkt, packets, false);
 
             }).then(function() {
                 return libav.av_write_trailer(oc);
@@ -692,25 +692,33 @@ function deleteTrack(track) {
 }
 ez.deleteTrack = deleteTrack;
 
-// Since we export the project just by exporting each track, this actually belongs here
-function exportProjectDialog() {
-    modalDialog.innerHTML = "";
-
-    mke(modalDialog, "label", {text: "Name:", "class": "inputlabel", "for": "filename"});
-    var nm = mke(modalDialog, "input", {id: "filename"});
-    nm.value = projectName;
-    mke(modalDialog, "br");
-    mke(modalDialog, "label", {text: "Format:", "class": "inputlabel", "for": "format"});
-    var fmtSelect = mke(modalDialog, "select", {id: "format"});
-    var formats =
+// The formats we can export to
+var exportFormats;
+function setExportFormats() {
+    exportFormats =
     [{format: "flac", codec: "flac", sample_fmt: libav.AV_SAMPLE_FMT_S32, name: "FLAC"},
      {format: "ipod", ext: "m4a", codec: "aac", sample_fmt: libav.AV_SAMPLE_FMT_FLTP, name: "M4A (MPEG-4 audio)"},
      {format: "ogg", codec: "libvorbis", sample_fmt: libav.AV_SAMPLE_FMT_FLTP, name: "Ogg Vorbis"},
      {format: "ogg", ext: "opus", codec: "libopus", sample_fmt: libav.AV_SAMPLE_FMT_FLT, sample_rate: 48000, name: "Opus"},
      {format: "wv", codec: "wavpack", sample_fmt: libav.AV_SAMPLE_FMT_FLTP, name: "wavpack"},
      {format: "wav", codec: "pcm_s16le", sample_fmt: libav.AV_SAMPLE_FMT_S16, name: "wav"}];
-    for (var fi = 0; fi < formats.length; fi++) {
-        var opt = mke(fmtSelect, "option", {text: formats[fi].name});
+    ez.exportFormats = exportFormats;
+}
+
+// Since we export the project just by exporting each track, this actually belongs here
+function exportProjectDialog() {
+    modalDialog.innerHTML = "";
+
+    var form = mke(modalDialog, "div", {"class": "modalform"});
+
+    mke(form, "label", {text: "Name:", "class": "inputlabel", "for": "filename"});
+    var nm = mke(form, "input", {id: "filename"});
+    nm.value = projectName;
+    mke(form, "br");
+    mke(form, "label", {text: "Format:", "class": "inputlabel", "for": "format"});
+    var fmtSelect = mke(form, "select", {id: "format"});
+    for (var fi = 0; fi < exportFormats.length; fi++) {
+        var opt = mke(fmtSelect, "option", {text: exportFormats[fi].name});
         opt.value = fi;
     }
 
@@ -729,7 +737,7 @@ function exportProjectDialog() {
     }).then(function(conf) {
         if (conf) {
             modal("Exporting...");
-            return exportProject(nm.value, formats[+fmtSelect.value]);
+            return exportProject(nm.value, exportFormats[+fmtSelect.value]);
         }
     }).then(function() {
         modal()

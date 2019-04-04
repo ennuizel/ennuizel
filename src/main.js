@@ -108,6 +108,9 @@ Promise.all([]).then(function() {
 }).then(function() {
     libav = LibAV;
 
+    // We can only define our export formats once we have libav loaded
+    setExportFormats();
+
     // Load any plugins
     var p = Promise.resolve(true);
     if (ez.plugins) {

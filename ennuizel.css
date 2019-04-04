@@ -104,3 +104,7 @@ a {
     border-radius: 0.5em;
     text-align: center;
 }
+
+.modalform {
+    text-align: left;
+}

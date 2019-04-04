@@ -21,10 +21,12 @@ function libAVFilterDialog(filter) {
 
     mke(modalDialog, "div", {text: filter.name});
 
+    var form = mke(modalDialog, "div", {"class": "modalform"});
+
     var paramEls = [];
     filter.params.forEach(function(param) {
-        var label = mke(modalDialog, "label", {"class": "inputlabel", text: param.name, "for": param.ff});
-        var el = mke(modalDialog, "input", {id: param.ff});
+        var label = mke(form, "label", {"class": "inputlabel", text: param.name, "for": param.ff});
+        var el = mke(form, "input", {id: param.ff});
         el.value = param["default"];
 
         // Limit it if applicable
@@ -43,7 +45,7 @@ function libAVFilterDialog(filter) {
 
         paramEls.push(el);
 
-        mke(modalDialog, "br");
+        mke(form, "br");
     });
 
     mke(modalDialog, "br");

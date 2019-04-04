@@ -79,18 +79,38 @@ function resetElements() {
     // Need the window size to fit the modal to it
     var w = window.visualViewport ? window.visualViewport.width : window.innerWidth;
     var h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+
+    // Start the modal dialog in a very open-ended mode to draw into
+    var maxWidthSet = true;
     modalDialog.style.width = modalDialog.style.height = modalDialog.style.overflow = "";
+    modalDialog.style.maxWidth = "30em";
 
-    modalDialog.style.left = modalDialog.style.top = "0px";
+    /* In order to get the modal dialog into the right place, we need to
+     * actually let it draw, so we run this function as a timeout */
+    function resetModal() {
+        if (modalDialog.offsetHeight > h && maxWidthSet) {
+            // We may have made it impossible to fit with the max width, so let it expand
+            modalDialog.style.maxWidth = "";
+            maxWidthSet = false;
+            setTimeout(resetModal, 0);
+            return;
+        }
 
-    if (modalDialog.offsetWidth > w || modalDialog.offsetHeight > h) {
-        modalDialog.style.width = w + "px";
-        modalDialog.style.height = h + "px";
-        modalDialog.style.overflow = "auto";
+        if (modalDialog.offsetWidth > w || modalDialog.offsetHeight > h) {
+            // It's too big, so make it fullscreen
+            modalDialog.style.width = w + "px";
+            modalDialog.style.height = h + "px";
+            modalDialog.style.overflow = "auto";
+        }
+
+        // Center it
+        var newX = Math.round((w - modalDialog.offsetWidth) / 2);
+        var newY = Math.round((h - modalDialog.offsetHeight) / 2);
+        modalDialog.style.left = newX + "px";
+        modalDialog.style.top = newY + "px";
     }
 
-    modalDialog.style.left = (w - modalDialog.offsetWidth) / 2 + "px";
-    modalDialog.style.top = (h - modalDialog.offsetHeight) / 2 + "px";
+    setTimeout(resetModal, 0);
 }
 resetElements();
 ez.resetElements = resetElements;
