@@ -1,0 +1,47 @@
+{
+    "ok":                   "OK",
+    "cancel":               "Cancel",
+    "loadinge":             "Loading...",
+    "loadingx":             "Loading %1",
+    "export":               "Export",
+    "deleteproject":        "Delete project",
+    "deletinge":            "Deleting...",
+
+    "projectname":          "Project name",
+    "project":              "Project",
+    "areyousure":           "Are you sure?",
+
+    "filter":               "Filter",
+    "filters":              "Filters",
+    "filteringe":           "Filtering...",
+    "filteringx":           "Filtering %1",
+    "mix":                  "Mix",
+    "mixlevel":             "Mix and level",
+    "mixnew":               "Mix into new track",
+    "mixlevelnew":          "Mix and level into new track",
+    "mixing":               "Mixing",
+
+    "selecte":              "Select...",
+    "new":                  "New",
+
+    "importinge":           "Importing...",
+    "noaudio":              "Couldn't find an audio stream",
+    "trackx":               "Track %1",
+    "filename":             "Filename",
+    "format":               "Format",
+    "exportinge":           "Exporting...",
+    "exportingx":           "Exporting %1",
+
+    "error":                "Ennuizel has encountered an error!",
+    "errordetails":         "Details",
+    "restart":              "Restart",
+    "importtrack":          "Import track",
+    "switchproject":        "Switch project",
+    "options":              "Opt",
+    "deletetrack":          "Delete track",
+    "rename":               "Rename",
+    "renaminge":            "Renaming...",
+    "renametrack":          "Rename track",
+    "renderingx":           "Rendering %1",
+    "newname":              "New name"
+}

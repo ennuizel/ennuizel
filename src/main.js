@@ -43,7 +43,17 @@ function loadLibrary(src) {
 // Do our initial main steps
 var persistence = false;
 Promise.all([]).then(function() {
+    // Load our locale
+    return loadLocale();
+
+}).then(function() {
+    // Now that we have our locale, load the menu
+    loadMenu();
+
+    // And show it
     showMenu();
+
+    // Load all our libraries
     LibAV = {base:"libav"};
     return Promise.all([
         loadLibrary("libav/libav-1.1.4.1-fat.js"),
@@ -145,18 +155,18 @@ function restart() {
         // List the projects in the modal dialog
         modalDialog.innerHTML = "";
 
-        mke(modalDialog, "label", {text: "Project: ", "for": "projectselect"});
+        mke(modalDialog, "label", {text: l("project") + ": ", "for": "projectselect"});
 
         var select = mke(modalDialog, "select", {id: "projectselect"});
 
-        var option = mke(select, "option", {text: "Select..."});
+        var option = mke(select, "option", {text: l("selecte")});
         option.value = "none";
         option.selected = true;
         projects.forEach(function(project) {
             var option = mke(select, "option", {text: project});
             option.value = "project:" + project;
         });
-        option = mke(select, "option", {text: "New"});
+        option = mke(select, "option", {text: l("new")});
         option.value = "new";
 
         modalToggle(true);

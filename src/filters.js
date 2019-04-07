@@ -49,9 +49,9 @@ function libAVFilterDialog(filter) {
     });
 
     mke(modalDialog, "br");
-    var no = mke(modalDialog, "button", {text: "Cancel"});
+    var no = mke(modalDialog, "button", {text: l("cancel")});
     mke(modalDialog, "span", {text: "  "});
-    var yes = mke(modalDialog, "button", {text: "Filter"});
+    var yes = mke(modalDialog, "button", {text: l("filter")});
 
     modalToggle(true);
     yes.focus();
@@ -62,7 +62,7 @@ function libAVFilterDialog(filter) {
 
     }).then(function(go) {
         if (go) {
-            modal("Filtering...");
+            modal(l("filteringe"));
 
             // Get our parameter values
             var paramVals = [];
@@ -133,7 +133,7 @@ function applyLibAVFilter(filter, paramVals)
                 throw new Error("Failed to allocate filtering frame!");
 
             function filterPart(t, track, i, part, frames) {
-                modal("Filtering " + track.name + ": " + Math.round(i/track.parts.length*100) + "%");
+                modal(l("filteringx", track.name) + ": " + Math.round(i/track.parts.length*100) + "%");
                 return libav.ff_filter_multi(srcCtx, sinkCtx, frame, frames, i === track.parts.length-1).then(function(frames) {
                     // Append it all
                     var p = Promise.all([]);
@@ -149,7 +149,7 @@ function applyLibAVFilter(filter, paramVals)
             return fetchTracks([trackId], {wholeParts: true}, filterPart);
 
         }).then(function() {
-            modal("Filtering...");
+            modal(l("filteringe"));
 
             // Free our leftovers and delete the old track's content
             return Promise.all([
@@ -222,7 +222,7 @@ function mix(opts) {
         return Math.max(a, b);
     });
 
-    modal("Mixing...");
+    modal(l("mixing") + "...");
 
     // We create a new track, filter into it, then delete all the old tracks
     return createTrack("Mix").then(function(ret) {
@@ -303,7 +303,7 @@ function mix(opts) {
         var trackFins;
 
         function ingestPart(t, track, i, part, frames) {
-            modal("Mixing: " + Math.round(i/max*100) + "%");
+            modal(l("mixing") + ": " + Math.round(i/max*100) + "%");
             var p;
             if (t <= lastT)
                 p = filterPart();
@@ -341,7 +341,7 @@ function mix(opts) {
         return fetchTracks(trackList, {wholeParts: true}, ingestPart).then(filterPart);
 
     }).then(function() {
-        modal("Mixing...");
+        modal(l("mixing") + "...");
 
         var p = Promise.all([
             libav.avfilter_graph_free_js(filterGraph),

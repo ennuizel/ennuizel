@@ -34,7 +34,7 @@ function importTrackDialog() {
 
     var input = mke(modalDialog, "input");
     input.type = "file";
-    var cancel = mke(modalDialog, "button", {text: "Cancel"});
+    var cancel = mke(modalDialog, "button", {text: l("cancel")});
 
     modalToggle(true);
     input.focus();
@@ -56,7 +56,7 @@ function importTrackDialog() {
         }
 
         // Read in the file
-        modal("Importing...");
+        modal(l("importinge"));
         var fr = new FileReader();
 
         return new Promise(function(res, rej) {
@@ -107,7 +107,7 @@ function importTrackData(name, ab) {
             }
         }
         if (astreams.length === 0)
-            throw new Error("Couldn't find an audio stream");
+            throw new Error(l("noaudio"));
 
         // Initialize all their decoders
         var p = Promise.all([]);
@@ -318,9 +318,9 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
                     // Display status
                     p = p.then(function() {
                         if (duration)
-                            modal("Loading " + name + ": " + Math.round(ptss[si] / duration * 100) + "%");
+                            modal(l("loadingx", name) + ": " + Math.round(ptss[si] / duration * 100) + "%");
                         else
-                            modal("Loading " + name + ": " + timestamp(ptss[si] / track.sampleRate));
+                            modal(l("loadingx", name) + ": " + timestamp(ptss[si] / track.sampleRate));
                     });
 
                     return p;
@@ -360,7 +360,7 @@ ez.importTrackLibAV = importTrackLibAV;
 function createTrack(name) {
     // Make sure there's a name
     if (typeof name === "undefined")
-        name = "Track " + (projectProperties.trackOrder.length+1);
+        name = l("trackx", (projectProperties.trackOrder.length+1));
 
     // Find an unused ID
     var trackId = randomId();
@@ -711,11 +711,11 @@ function exportProjectDialog() {
 
     var form = mke(modalDialog, "div", {"class": "modalform"});
 
-    mke(form, "label", {text: "Name:", "class": "inputlabel", "for": "filename"});
+    mke(form, "label", {text: l("filename") + ":", "class": "inputlabel", "for": "filename"});
     var nm = mke(form, "input", {id: "filename"});
     nm.value = projectName;
     mke(form, "br");
-    mke(form, "label", {text: "Format:", "class": "inputlabel", "for": "format"});
+    mke(form, "label", {text: l("format") + ":", "class": "inputlabel", "for": "format"});
     var fmtSelect = mke(form, "select", {id: "format"});
     for (var fi = 0; fi < exportFormats.length; fi++) {
         var opt = mke(fmtSelect, "option", {text: exportFormats[fi].name});
@@ -724,9 +724,9 @@ function exportProjectDialog() {
 
     mke(modalDialog, "div", {text: "\n\n"});
 
-    var cancel = mke(modalDialog, "button", {text: "Cancel"});
+    var cancel = mke(modalDialog, "button", {text: l("cancel")});
     mke(modalDialog, "span", {text: "  "});
-    var ok = mke(modalDialog, "button", {text: "Export"});
+    var ok = mke(modalDialog, "button", {text: l("export")});
 
     modalToggle(true);
     ok.focus();
@@ -736,7 +736,7 @@ function exportProjectDialog() {
         cancel.onclick = function() { res(false); };
     }).then(function(conf) {
         if (conf) {
-            modal("Exporting...");
+            modal(l("exportinge"));
             return exportProject(nm.value, exportFormats[+fmtSelect.value]);
         }
     }).then(function() {
@@ -859,7 +859,7 @@ function exportProject(name, format) {
                     });
 
                     // Display it
-                    modal("Exporting " + trackName + ": " + Math.round(pts/track.length*100) + "%");
+                    modal(l("exportingx", trackName) + ": " + Math.round(pts/track.length*100) + "%");
 
                     // Encode it
                     return libav.ff_encode_multi(c, frame, pkt, frames, fin);

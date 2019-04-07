@@ -67,6 +67,7 @@ var trackContainer = mke(body, "div", {"class": "trackcontainer"});
 var trackSpace = mke(trackContainer, "div", {"class": "trackspace"});
 
 var modalPop = mke(body, "div", {"class": "modalpop"});
+// NOTE: This loading message cannot be translated, as we haven't loaded the locale yet
 var modalDialog = mke(body, "div", {"class": "modal", text: "Loading..."});
 var modalVisible = true;
 ez.modalDialog = modalDialog;
@@ -143,10 +144,10 @@ ez.modal = modal;
 function error(ex) {
     modalDialog.innerHTML = "";
 
-    mke(modalDialog, "div", {text: "Ennuizel has encountered an error!\n\nDetails: " + ex + "\n\n" + ex.stack + "\n\n"});
-    var restart = mke(modalDialog, "button", {text: "Restart"});
+    mke(modalDialog, "div", {text: l("error") + "\n\n" + l("errordetails") + ": " + ex + "\n\n" + ex.stack + "\n\n"});
+    var restart = mke(modalDialog, "button", {text: l("restart")});
     mke(modalDialog, "span", {text: "  "});
-    var del = mke(modalDialog, "button", {text: "Delete project"});
+    var del = mke(modalDialog, "button", {text: l("deleteproject")});
 
     modalToggle(true);
     restart.focus();
@@ -166,7 +167,7 @@ function warn(ex) {
 
     if (ex instanceof Error) ex = ex + "\n" + ex.stack;
     mke(modalDialog, "div", {text: ex + "\n\n"});
-    var button = mke(modalDialog, "button", {text: "OK"});
+    var button = mke(modalDialog, "button", {text: l("ok")});
 
     modalToggle(true);
     button.focus();
@@ -180,55 +181,68 @@ function warn(ex) {
 }
 ez.warn = warn;
 
-// Menu code
-var menu = [
-    {
-        name: "Project",
-        sub: [
-            {
-                name: "Import track",
-                on: importTrackDialog
-            },
-            {
-                name: "Export",
-                on: exportProjectDialog
-            },
-            {
-                name: "Switch project",
-                on: restart
-            },
-            {
-                name: "Delete project",
-                on: deleteProjectDialog
-            }
-        ]
-    },
-    {
-        name: "Filters",
-        sub: [],
-        last: [
-            {
-                name: "Mix",
-                on: mixSimple
-            },
-            {
-                name: "Mix and level",
-                on: mixLevel
-            },
-            {
-                name: "Mix into new track",
-                on: mixSimpleKeep
-            },
-            {
-                name: "Mix and level into new track",
-                on: mixLevelKeep
-            }
-        ]
-    }
-];
-ez.menu = menu;
-var filterMenu = menu[1];
-ez.filterMenu = filterMenu;
+// The menu, not filled until we've loaded our locale
+var menu = null;
+var filterMenu = null;
+
+function loadMenu() {
+    ez.menu = menu = [
+        {
+            name: l("project"),
+            sub: [
+                {
+                    name: l("importtrack"),
+                    on: importTrackDialog
+                },
+                {
+                    name: l("export"),
+                    on: exportProjectDialog
+                },
+                {
+                    name: l("switchproject"),
+                    on: restart
+                },
+                {
+                    name: l("deleteproject"),
+                    on: deleteProjectDialog
+                }
+            ]
+        },
+        {
+            name: l("filters"),
+            sub: [],
+            last: [
+                {
+                    name: l("mix"),
+                    on: mixSimple
+                },
+                {
+                    name: l("mixlevel"),
+                    on: mixLevel
+                },
+                {
+                    name: l("mixnew"),
+                    on: mixSimpleKeep
+                },
+                {
+                    name: l("mixlevelnew"),
+                    on: mixLevelKeep
+                }
+            ]
+        }
+    ];
+
+    ez.filterMenu = filterMenu = menu[1];
+
+    // Get in the ff filters
+    menuConvertFilters();
+
+    // And add the rest
+    filterMenu.sub = filterMenu.sub.concat(filterMenu.last);
+    delete filterMenu.last;
+
+}
+
 var menuSelected = null;
 
 // Display the main menu in its current state and update all elements
@@ -346,6 +360,7 @@ function ffparam(nm, desc, db, def, min, max) {
     return ret;
 }
 
+// NOTE: For the time being, we never translate the ff filters
 var fffilters = [
     {
         name: "Compressor",
@@ -432,12 +447,6 @@ function menuConvertFilters() {
         filterMenu.sub.push(menu);
     });
 }
-menuConvertFilters();
-
-// And add the rest
-filterMenu.sub = filterMenu.sub.concat(filterMenu.last);
-delete filterMenu.last;
-showMenu();
 
 // Zooming is done via CSS
 var partWidth = 64;
@@ -479,7 +488,7 @@ function updateTrackViews() {
             var container = mke(trackDiv, "span", {"class": "trackview"});
             var header = mke(container, "span", {"class": "trackheader"});
             var desc = mke(header, "div", {"class": "trackdesc"});
-            var opts = mke(header, "button", {text: "Opt"});
+            var opts = mke(header, "button", {text: l("options")});
             opts.style.width = "90%";
             var partsContainer = mke(container, "span");
             trackViews[track] = {
@@ -532,11 +541,11 @@ function updateTrackView(track) {
 
         modalDialog.innerHTML = "";
 
-        var del = mke(modalDialog, "button", {text: "Delete track"});
+        var del = mke(modalDialog, "button", {text: l("deletetrack")});
         mke(modalDialog, "div", {text: "\n\n"});
-        var ren = mke(modalDialog, "button", {text: "Rename track"});
+        var ren = mke(modalDialog, "button", {text: l("renametrack")});
         mke(modalDialog, "div", {text: "\n\n"});
-        var cancel = mke(modalDialog, "button", {text: "Cancel"});
+        var cancel = mke(modalDialog, "button", {text: l("cancel")});
 
         modalToggle(true);
         cancel.focus();
@@ -576,7 +585,7 @@ function updateTrackView(track) {
 
     // Draw a part from its frames
     function drawPart(t, track, i, inPart, frames) {
-        modal("Rendering " + track.name + ": " + Math.round(i/track.parts.length*100) + "%");
+        modal(l("renderingx", track.name) + ": " + Math.round(i/track.parts.length*100) + "%");
 
         var ln2 = Math.log2(2);
         var canvas = dce("canvas");
@@ -669,17 +678,17 @@ ez.selectTrack = selectTrack;
 function deleteTrackDialog(track) {
     modalDialog.innerHTML = "";
 
-    mke(modalDialog, "div", {text: "Are you sure?\n\n"});
-    var no = mke(modalDialog, "button", {text: "Cancel"});
+    mke(modalDialog, "div", {text: l("areyousure") + "\n\n"});
+    var no = mke(modalDialog, "button", {text: l("cancel")});
     mke(modalDialog, "span", {text: "  "});
-    var yes = mke(modalDialog, "button", {text: "Delete track"});
+    var yes = mke(modalDialog, "button", {text: l("deletetrack")});
 
     modalToggle(true);
     no.focus();
 
     return new Promise(function(res, rej) {
         yes.onclick = function() {
-            modal("Deleting...");
+            modal(l("deletinge"));
             deleteTrack(track).then(res).catch(rej);
         };
 
@@ -695,13 +704,13 @@ function deleteTrackDialog(track) {
 function renameTrackDialog(track) {
     modalDialog.innerHTML = "";
 
-    mke(modalDialog, "label", {text: "New name:", "class": "inputlabel", "for": "trackname"});
+    mke(modalDialog, "label", {text: l("newname") + ":", "class": "inputlabel", "for": "trackname"});
     var nm = mke(modalDialog, "input", {id: "trackname"});
     nm.value = track.name;
     mke(modalDialog, "div", {text: "\n\n"});
-    var no = mke(modalDialog, "button", {text: "Cancel"});
+    var no = mke(modalDialog, "button", {text: l("cancel")});
     mke(modalDialog, "span", {text: "  "});
-    var yes = mke(modalDialog, "button", {text: "Rename"});
+    var yes = mke(modalDialog, "button", {text: l("rename")});
 
     modalToggle(true);
     nm.focus();
@@ -709,7 +718,7 @@ function renameTrackDialog(track) {
     return new Promise(function(res, rej) {
         yes.onclick = function() {
             if (nm.value !== "") {
-                modal("Renaming...");
+                modal(l("renaminge"));
                 res(true);
             } else {
                 nm.focus();

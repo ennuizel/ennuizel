@@ -104,12 +104,12 @@ ez.dbCacheFlush = dbCacheFlush;
 function newProjectDialog() {
     // Show the name request
     modalDialog.innerHTML = "";
-    mke(modalDialog, "label", {text: "Project name: ", "for": "projectname"});
+    mke(modalDialog, "label", {text: l("projectname") + ": ", "for": "projectname"});
     var nmbox = mke(modalDialog, "input", {id: "projectname"});
     mke(modalDialog, "div", {text: "\n"});
-    var ok = mke(modalDialog, "button", {text: "OK"});
+    var ok = mke(modalDialog, "button", {text: l("ok")});
     mke(modalDialog, "span", {text: "  "});
-    var cancel = mke(modalDialog, "button", {text: "Cancel"});
+    var cancel = mke(modalDialog, "button", {text: l("cancel")});
 
     modalToggle(true);
     nmbox.focus();
@@ -158,9 +158,9 @@ ez.createProject = createProject;
 // Load an existing (or empty) project
 function loadProject() {
     projectName = ez.projectName;
-    modal("Loading...");
+    modal(l("loadinge"));
 
-    menuTitle.innerText = "Project: " + projectName;
+    menuTitle.innerText = l("project") + ": " + projectName;
     resetElements();
     dbCacheFlush();
     ez.dbCurrent = dbCurrent = localforage.createInstance({name:"ennuizel-project-" + projectName});
@@ -220,17 +220,17 @@ function deleteProjectDialog() {
     // Give them a chance to assert
     modalDialog.innerHTML = "";
 
-    mke(modalDialog, "div", {text: "Are you sure?\n\n"});
-    var no = mke(modalDialog, "button", {text: "Cancel"});
+    mke(modalDialog, "div", {text: l("areyousure") + "\n\n"});
+    var no = mke(modalDialog, "button", {text: l("cancel")});
     mke(modalDialog, "span", {text: "  "});
-    var yes = mke(modalDialog, "button", {text: "Delete the project"});
+    var yes = mke(modalDialog, "button", {text: l("deleteproject")});
 
     modalToggle(true);
     no.focus();
 
     return new Promise(function(res, rej) {
         yes.onclick = function() {
-            modal("Deleting...");
+            modal(l("deletinge"));
             deleteProject().then(res).catch(rej);
         };
         no.onclick = rej;
