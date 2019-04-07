@@ -1,0 +1,47 @@
+{
+    "ok": "OK",
+    "cancel": "Annulla",
+    "loadinge": "Carico...",
+    "loadingx": "Carico di%1",
+    "export": "Esporta",
+    "deleteproject": "Elimina progetto",
+    "deletinge": "Elimino...",
+
+    "projectname": "Nome progetto",
+    "project": "Progetto",
+    "areyousure": "Sei sicuro?",
+
+    "filter": "Filtra",
+    "filters": "Filtri",
+    "filteringe": "Filtro...",
+    "filteringx": "Filtro %1",
+    "mix": "Mixa",
+    "mixlevel": "Mixa and livella",
+    "mixnew": "Mixa in una nuova traccia",
+    "mixlevelnew": "Mixa e livella in una nuova traccia",
+    "mixing": "Mixo",
+
+    "selecte": "Seleziona...",
+    "new": "Nuovo",
+
+    "importinge": "Importo...",
+    "noaudio": "Impossibile trovare uno stream audio",
+    "trackx": "Traccia %1",
+    "filename": "Nome file",
+    "format": "Formato",
+    "exportinge": "Esporto...",
+    "exportingx": "Esporto %1",
+
+    "error": "Ennuizel ha riscontrato un errore!",
+    "errordetails": "Dettagli",
+    "restart": "Riavvia",
+    "importtrack": "Importa traccia",
+    "switchproject": "Cambia progetto",
+    "options": "Opz",
+    "deletetrack": "Elimina traccia",
+    "rename": "Rinomina",
+    "renaminge": "Rinomino...",
+    "renametrack": "Rinomina traccia",
+    "renderingx": "Rendering di %1",
+    "newname": "Nuovo nome"
+}
