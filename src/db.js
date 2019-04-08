@@ -38,8 +38,16 @@ var dbCache = {
 
 // Get an item out of the cache
 function dbCacheGet(item) {
-    if (item in dbCache.cache)
+    if (item in dbCache.cache) {
+        // Put it at the end of the LRU list
+        var idx = dbCache.ids.indexOf(item);
+        if (idx >= 0)
+            dbCache.ids.splice(idx, 1);
+        dbCache.ids.push(item);
+
+        // Then return the cached value
         return Promise.resolve(dbCache.cache[item]);
+    }
 
     var limit = ((projectProperties && projectProperties.trackOrder) ?
         projectProperties.trackOrder.length : 0) + 3;
@@ -49,8 +57,9 @@ function dbCacheGet(item) {
         // Dump something from the cache
         var d = dbCache.ids.shift();
         var v = dbCache.cache[d];
-        var c = dbCache.changed[d];
         delete dbCache.cache[d];
+        var c = dbCache.changed[d];
+        delete dbCache.changed[d];
         if (c)
             p = dbCurrent.setItem(d, v);
         else
@@ -72,6 +81,10 @@ ez.dbCacheGet = dbCacheGet;
 // Set an item via the cache
 function dbCacheSet(item, value) {
     if (item in dbCache.cache) {
+        var idx = dbCache.ids.indexOf(item);
+        if (idx >= 0)
+            dbCache.ids.splice(idx, 1);
+        dbCache.ids.push(item);
         dbCache.cache[item] = value;
         dbCache.changed[item] = true;
         return Promise.all([]);
@@ -80,6 +93,7 @@ function dbCacheSet(item, value) {
     // Get it to bring it into the cache first
     return dbCacheGet(item).then(function() {
         dbCache.cache[item] = value;
+        dbCache.changed[item] = true;
     });
 }
 ez.dbCacheSet = dbCacheSet;

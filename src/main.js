@@ -54,9 +54,12 @@ Promise.all([]).then(function() {
     showMenu();
 
     // Load all our libraries
-    LibAV = {base:"libav"};
+    if (typeof LibAV === "undefined")
+        LibAV = {base:"libav"};
+    else
+        LibAV.base = "libav";
     return Promise.all([
-        loadLibrary("libav/libav-1.1.4.1-fat.js"),
+        loadLibrary("libav/libav-1.2.4.1.3-fat.js"),
         loadLibrary("localforage.min.js"),
         loadLibrary("StreamSaver.js"),
         loadLibrary("FileSaver.min.js")

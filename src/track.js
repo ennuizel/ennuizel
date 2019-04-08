@@ -171,9 +171,14 @@ function timestamp(time) {
     return ts;
 }
 
-// Import one or more tracks once we're already prepared in libav.js
+/* Import one or more tracks once we're already prepared in libav.js. This
+ * function can use an alternative libav.js worker, so that plugins can import
+ * with multithreading, by setting opts.libav. If an alt libav is set, then
+ * tracks will not be rendered, since that isn't threadable (for the moment). */
 function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frameptrs, opts) {
     opts = opts || {};
+    var la = opts.libav || libav;
+    var report = opts.report || modal;
     var tracks = [];
     var needFilter = [];
     var filterGraphs = {}, buffersrcCtxs = {}, buffersinkCtxs = {};
@@ -200,7 +205,7 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
             if (err === -libav.EAGAIN && Object.keys(packets).length === 0 && opts.againCb) {
                 // Nothing to read, request more
                 return opts.againCb().then(function() {
-                    return libav.ff_read_multi(fmt_ctx, pkts[0], opts.devfile, maxReadSize);
+                    return la.ff_read_multi(fmt_ctx, pkts[0], opts.devfile, maxReadSize);
                 }).then(handlePackets);
             }
 
@@ -222,7 +227,7 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
                 var buffersinkCtx = buffersinkCtxs[si];
 
                 p = p.then(function() {
-                    return libav.ff_decode_multi(c, pkt, frame, spackets, (err === libav.AVERROR_EOF));
+                    return la.ff_decode_multi(c, pkt, frame, spackets, (err === libav.AVERROR_EOF));
                 }).then(function(ret) {
                     frames = ret;
                     if (!filterGraph && needFilter[si] && frames.length) {
@@ -274,7 +279,7 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
                             }
                         }
 
-                        return libav.ff_init_filter_graph(opts.filter ? opts.filter : "anull", {
+                        return la.ff_init_filter_graph(opts.filter ? opts.filter : "anull", {
                             sample_rate: frames[0].sample_rate,
                             sample_fmt: frames[0].format,
                             channel_layout: channelLayout
@@ -297,7 +302,7 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
 
                     // Possibly transform it
                     if (filterGraph)
-                        return libav.ff_filter_multi(buffersrcCtx, buffersinkCtx, frame, frames, (err === libav.AVERROR_EOF));
+                        return la.ff_filter_multi(buffersrcCtx, buffersinkCtx, frame, frames, (err === libav.AVERROR_EOF));
                     return null;
 
                 }).then(function(ret) {
@@ -311,16 +316,16 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
                     frames.forEach(function(frame) {
                         ptss[si] += frame.nb_samples;
                         p = p.then(function() {
-                            return trackAppend(track, frame);
+                            return trackAppend(track, frame, la);
                         });
                     });
 
                     // Display status
                     p = p.then(function() {
                         if (duration)
-                            modal(l("loadingx", name) + ": " + Math.round(ptss[si] / duration * 100) + "%");
+                            report(l("loadingx", name) + ": " + Math.round(ptss[si] / duration * 100) + "%");
                         else
-                            modal(l("loadingx", name) + ": " + timestamp(ptss[si] / track.sampleRate));
+                            report(l("loadingx", name) + ": " + timestamp(ptss[si] / track.sampleRate));
                     });
 
                     return p;
@@ -331,14 +336,14 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
             // Either we're done, or we need to loop again
             if (err === -libav.EAGAIN) {
                 p = p.then(function() {
-                    return libav.ff_read_multi(fmt_ctx, pkts[0], opts.devfile, maxReadSize).then(handlePackets);
+                    return la.ff_read_multi(fmt_ctx, pkts[0], opts.devfile, maxReadSize).then(handlePackets);
                 });
             }
 
             return p;
         }
 
-        return libav.ff_read_multi(fmt_ctx, pkts[0], opts.devfile, maxReadSize).then(handlePackets);
+        return la.ff_read_multi(fmt_ctx, pkts[0], opts.devfile, maxReadSize).then(handlePackets);
 
     }).then(function() {
         // Free our filters
@@ -346,13 +351,16 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
         for (var si = 0; si < tracks.length; si++) (function(si) {
             if (filterGraphs[si]) {
                 p = p.then(function() {
-                    return libav.avfilter_graph_free_js(filterGraphs[si]);
+                    return la.avfilter_graph_free_js(filterGraphs[si]);
                 });
             }
         })(si);
         return p;
 
-    }).then(dbCacheFlush).then(updateTrackViews);
+    }).then(dbCacheFlush).then(function() {
+        if (!opts.libav)
+            return updateTrackViews();
+    });
 }
 ez.importTrackLibAV = importTrackLibAV;
 
@@ -388,7 +396,8 @@ function createTrack(name) {
 ez.createTrack = createTrack;
 
 // Append a frame to a track (does not flush)
-function trackAppend(track, frame) {
+function trackAppend(track, frame, la) {
+    la = la || libav;
     var parts = track.parts;
     var part, data;
 
@@ -458,7 +467,7 @@ function trackAppend(track, frame) {
         if (part.length >= maxFragment*track.sampleRate) {
             // Time to compress this part
             var c, frm, pkt, oc, pb;
-            return libav.ff_init_encoder("wavpack", {
+            return la.ff_init_encoder("wavpack", {
                 sample_fmt: track.format,
                 sample_rate: track.sampleRate,
                 channel_layout: track.channelLayout
@@ -467,35 +476,35 @@ function trackAppend(track, frame) {
                 frm = ret[2];
                 pkt = ret[3];
 
-                return libav.ff_init_muxer({filename: "data-" + part.id + ".wv", open: true}, [[c, 1, track.sampleRate]]);
+                return la.ff_init_muxer({filename: "data-" + part.id + ".wv", open: true}, [[c, 1, track.sampleRate]]);
 
             }).then(function(ret) {
                 oc = ret[0];
                 pb = ret[2];
 
-                return libav.avformat_write_header(oc, 0);
+                return la.avformat_write_header(oc, 0);
 
             }).then(function() {
-                return libav.ff_encode_multi(c, frm, pkt, data, true);
+                return la.ff_encode_multi(c, frm, pkt, data, true);
 
             }).then(function(packets) {
-                return libav.ff_write_multi(oc, pkt, packets, false);
+                return la.ff_write_multi(oc, pkt, packets, false);
 
             }).then(function() {
-                return libav.av_write_trailer(oc);
+                return la.av_write_trailer(oc);
 
             }).then(function() {
                 return Promise.all([
-                    libav.readFile("data-" + part.id + ".wv"),
-                    libav.ff_free_muxer(oc, pb),
-                    libav.ff_free_encoder(c, frm, pkt)
+                    la.readFile("data-" + part.id + ".wv"),
+                    la.ff_free_muxer(oc, pb),
+                    la.ff_free_encoder(c, frm, pkt)
                 ]);
 
             }).then(function(ret) {
                 data = ret[0];
                 part.raw = false;
 
-                return libav.unlink("data-" + part.id + ".wv");
+                return la.unlink("data-" + part.id + ".wv");
             }).catch(warn);
         }
 
@@ -508,7 +517,6 @@ function trackAppend(track, frame) {
 
     }).catch(warn);
 }
-ez.trackAppend = trackAppend;
 
 /* Fetch the content of a list of tracks (by ID), with options for how to fetch
  * and a callback.  If opts.wholeParts, callback is called every part, with

@@ -1,7 +1,7 @@
 MINIFIER=closure-compiler --language_in=ECMASCRIPT5
 #MINIFIER=cat
 
-DEPS=libav/libav-1.1.4.1-fat.js \
+DEPS=libav/libav-1.2.4.1.3-fat.js \
 	FileSaver.min.js \
 	localforage.min.js
 
@@ -22,7 +22,7 @@ ennuizel.js: $(SRC)
 ennuizel.min.js: $(SRC)
 	cat $(SRC) | $(MINIFIER) | cat src/license.js - > $@
 
-libav/libav-1.0.4.1-fat.js:
+libav/libav-1.2.4.1.3-fat.js:
 	echo 'You must copy or link a "fat" build of libav.js to the libav/ directory.'
 	false
 
