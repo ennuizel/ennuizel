@@ -145,14 +145,14 @@ function error(ex) {
     modalDialog.innerHTML = "";
 
     mke(modalDialog, "div", {text: l("error") + "\n\n" + l("errordetails") + ": " + ex + "\n\n" + ex.stack + "\n\n"});
-    var restart = mke(modalDialog, "button", {text: l("restart")});
+    var resB = mke(modalDialog, "button", {text: l("restart")});
     mke(modalDialog, "span", {text: "  "});
     var del = mke(modalDialog, "button", {text: l("deleteproject")});
 
     modalToggle(true);
-    restart.focus();
+    resB.focus();
 
-    restart.onclick = function() {
+    resB.onclick = function() {
         restart();
     };
     del.onclick = function() {
