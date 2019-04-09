@@ -85,7 +85,7 @@ function applyLibAVFilter(filter, paramVals)
     var p = Promise.all([]);
 
     // Apply one-by-one to each selected track
-    selectedTracks().forEach(function(trackId) {
+    nonemptyTracks(selectedTracks()).forEach(function(trackId) {
         var track = tracks[trackId];
         var outTrack, filterGraph, srcCtx, sinkCtx;
         var frame;
@@ -213,7 +213,7 @@ function mix(opts) {
     var descr, inp, outp;
 
     // Figure out which tracks we're mixing
-    var trackList = selectedTracks();
+    var trackList = nonemptyTracks(selectedTracks());
 
     // Maximum part number
     var max = trackList.map(function(x) {

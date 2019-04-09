@@ -755,7 +755,7 @@ function exportProjectDialog() {
 
 // Our actual track-by-track export
 function exportProject(name, format) {
-    var trackList = selectedTracks();
+    var trackList = nonemptyTracks(selectedTracks());
     var ext = format.ext?format.ext:format.format;
 
     function exportTrack(track) {

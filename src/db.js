@@ -229,6 +229,17 @@ function selectedTracks() {
 }
 ez.selectedTracks = selectedTracks;
 
+// Reduce a track selection by choosing only nonempty tracks
+function nonemptyTracks(sel) {
+    var out = [];
+    sel.forEach(function(id) {
+        var track = tracks[id];
+        if (track.parts.length > 0) out.push(id);
+    });
+    return out;
+}
+ez.nonemptyTracks = nonemptyTracks;
+
 // Delete the current project (dialog)
 function deleteProjectDialog() {
     // Give them a chance to assert
