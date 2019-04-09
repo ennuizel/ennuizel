@@ -1,7 +1,7 @@
 MINIFIER=closure-compiler --language_in=ECMASCRIPT5
 #MINIFIER=cat
 
-DEPS=libav/libav-1.2.4.1.3-fat.js \
+DEPS=libav/libav-1.3.4.1.3-fat.js \
 	FileSaver.min.js \
 	localforage.min.js
 

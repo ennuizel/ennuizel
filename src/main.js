@@ -17,6 +17,9 @@
 // Local ref to libav.js
 var libav;
 
+// And its source
+var libavSrc = "libav/libav-1.3.4.1.3-fat.js";
+
 // The maximum size to read from a file in one gulp
 var maxReadSize = 8*1024*1024;
 
@@ -54,12 +57,10 @@ Promise.all([]).then(function() {
     showMenu();
 
     // Load all our libraries
-    if (typeof LibAV === "undefined")
-        LibAV = {base:"libav"};
-    else
-        LibAV.base = "libav";
+    if (typeof LibAV === "undefined") LibAV = {};
+    LibAV.base = "libav";
     return Promise.all([
-        loadLibrary("libav/libav-1.2.4.1.3-fat.js"),
+        loadLibrary(libavSrc),
         loadLibrary("localforage.min.js"),
         loadLibrary("StreamSaver.js"),
         loadLibrary("FileSaver.min.js")

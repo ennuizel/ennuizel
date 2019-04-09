@@ -708,6 +708,7 @@ function setExportFormats() {
      {format: "ipod", ext: "m4a", codec: "aac", sample_fmt: libav.AV_SAMPLE_FMT_FLTP, name: "M4A (MPEG-4 audio)"},
      {format: "ogg", codec: "libvorbis", sample_fmt: libav.AV_SAMPLE_FMT_FLTP, name: "Ogg Vorbis"},
      {format: "ogg", ext: "opus", codec: "libopus", sample_fmt: libav.AV_SAMPLE_FMT_FLT, sample_rate: 48000, name: "Opus"},
+     {format: "ipod", ext: "m4a", codec: "alac", sample_fmt: libav.AV_SAMPLE_FMT_S32P, name: "ALAC (Apple Lossless)"},
      {format: "wv", codec: "wavpack", sample_fmt: libav.AV_SAMPLE_FMT_FLTP, name: "wavpack"},
      {format: "wav", codec: "pcm_s16le", sample_fmt: libav.AV_SAMPLE_FMT_S16, name: "wav"}];
     ez.exportFormats = exportFormats;
@@ -970,6 +971,25 @@ function exportProject(name, format) {
     }
 
     var p = Promise.all([]);
+
+    /* ALAC + WebAssembly = bugs! Our insane solution is to *reload* libav with
+     * plain asm.js if it's requested */
+    if (format.codec === "alac" && !libav.nowasm) {
+        LibAV = {base: "libav", nowasm: true};
+        p = p.then(function() {
+            return loadLibrary(libavSrc);
+        }).then(function() {
+            return new Promise(function(res, rej) {
+                if (LibAV.ready)
+                    res();
+                else
+                    LibAV.onready = res;
+            });
+        }).then(function() {
+            libav = LibAV;
+        });
+    }
+
     trackList.forEach(function(trackId) {
         var track = tracks[trackId];
         p = p.then(function() {
