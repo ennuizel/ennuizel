@@ -762,7 +762,7 @@ function exportProject(name, format) {
         // Figure out the name
         var trackName = name;
         if (trackList.length > 1)
-            trackName += "-" + track.name;
+            trackName += "-" + track.name.replace(/[^a-zA-Z0-9]/g, "_");
         trackName += "." + ext;
 
         // Set up the device to mux
