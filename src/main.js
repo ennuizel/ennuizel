@@ -82,9 +82,19 @@ Promise.all([]).then(function() {
      * (4) If we didn't get persistence, prefer WebSQL, with which Chrome will
      *     give us a larger quota.
      */
-    if (navigator.storage && navigator.storage.persist)
-        return navigator.storage.persist();
+    if (navigator.storage && navigator.storage.persisted)
+        return navigator.storage.persisted();
     return false;
+
+}).then(function(ret) {
+    persistence = ret;
+
+    if (!persistence && navigator.storage && navigator.storage.persist) {
+        return warn(l("persistence")).then(function() {
+            return navigator.storage.persist();
+        });
+    }
+    return persistence;
 
 }).then(function(ret) {
     persistence = ret;
@@ -101,6 +111,10 @@ Promise.all([]).then(function() {
 }).then(function(ret) {
     persistence = ret;
 
+    if (!persistence)
+        return warn(l("persistenceno"));
+
+}).then(function() {
     if (!persistence) {
         localforage.config({
             driver: [
