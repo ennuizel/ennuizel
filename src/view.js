@@ -144,7 +144,15 @@ ez.modal = modal;
 function error(ex) {
     modalDialog.innerHTML = "";
 
-    mke(modalDialog, "div", {text: l("error") + "\n\n" + l("errordetails") + ": " + ex + "\n\n" + ex.stack + "\n\n"});
+    if (ex instanceof Error) {
+        ex = ex + "\n\n" + ex.stack;
+    } else if (typeof ex === "object") {
+        try {
+            ex = JSON.stringify(ex);
+        } catch (err) {}
+    }
+
+    mke(modalDialog, "div", {text: l("error") + "\n\n" + l("errordetails") + ": " + ex + "\n\n"});
     var resB = mke(modalDialog, "button", {text: l("restart")});
     mke(modalDialog, "span", {text: "  "});
     var del = mke(modalDialog, "button", {text: l("deleteproject")});
@@ -165,7 +173,14 @@ ez.error = error;
 function warn(ex) {
     modalDialog.innerHTML = "";
 
-    if (ex instanceof Error) ex = ex + "\n" + ex.stack;
+    if (ex instanceof Error) {
+        ex = ex + "\n\n" + ex.stack;
+    } else if (typeof ex === "object") {
+        try {
+            ex = JSON.stringify(ex);
+        } catch (err) {}
+    }
+
     mke(modalDialog, "div", {text: ex + "\n\n"});
     var button = mke(modalDialog, "button", {text: l("ok")});
 

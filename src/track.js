@@ -598,7 +598,7 @@ function fetchTracks(trackList, opts, cb) {
 
     function fetchPartRaw() {
         // Easy, just get it out of the DB and call the callback on each part
-        return dbCurrent.getItem("data-" + part.id).then(function(frames) {
+        return dbCacheGet("data-" + part.id).then(function(frames) {
             if (opts.wholeParts) {
                 return cb(t, track, i, part, frames);
             } else {
@@ -616,7 +616,7 @@ function fetchTracks(trackList, opts, cb) {
     function fetchPartCooked() {
         // We'll need to actually decode it
         var fmt_ctx, c, pkt, frame, frames;
-        return dbCurrent.getItem("data-" + part.id).then(function(data) {
+        return dbCacheGet("data-" + part.id).then(function(data) {
             return libav.writeFile("data-" + part.id + ".wv", data);
         }).then(function() {
             return libav.ff_init_demuxer_file("data-" + part.id + ".wv");
@@ -666,8 +666,8 @@ function emptyTrack(track) {
     track.parts.forEach(function(part) {
         p = p.then(function() {
             return Promise.all([
-                dbCurrent.removeItem("data-" + part.id),
-                dbCurrent.removeItem("waveform-" + part.id)
+                dbRemove("data-" + part.id),
+                dbRemove("waveform-" + part.id)
             ]);
         });
     });
@@ -961,7 +961,7 @@ function exportProject(name, format) {
             for (var bi = 0; bi <= maxBlock; bi++) {
                 (function(bi) {
                     p = p.then(function() {
-                        dbCurrent.removeItem("export-" + bi);
+                        return dbRemove("export-" + bi);
                     });
                 })(bi);
             }
