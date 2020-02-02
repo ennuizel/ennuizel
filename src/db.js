@@ -232,7 +232,9 @@ function loadProject() {
     menuTitle.innerText = l("project") + ": " + projectName;
     resetElements();
     dbCacheFlush();
-    //ez.dbCurrent = dbCurrent = localforage.createInstance({name:"ennuizel-project-" + projectName});
+    ez.dbCurrent = dbCurrent = localforage.createInstance({name:"ennuizel-project-" + projectName});
+
+    /* Debugging fake DB for Drive testing:
     ez.dbCurrent = dbCurrent = {
         getItem: function(item) {
             if (item === "overflow")
@@ -250,7 +252,8 @@ function loadProject() {
         dropInstance: function() {
             return Promise.resolve();
         }
-    };
+    }; */
+
     ez.dbDrive = dbDrive = null;
 
     // Check if we need to use Drive
