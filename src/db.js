@@ -388,11 +388,8 @@ function driveLogIn() {
 
     return new Promise(function(res, rej) {
         // Tell them we're loading
-        if (!modalWasVisible) {
-            modalDialog.innerHTML = "";
-            mke(modalDialog, "span", {text: "Loading Google Drive..."});
-            modalToggle(true);
-        }
+        if (!modalWasVisible)
+            modal("Loading Google Drive...");
 
         // Load the credentials
         xhr = new XMLHttpRequest();
@@ -430,9 +427,22 @@ function driveLogIn() {
         });
 
     }).then(function() {
+        if (!gapi.auth2.getAuthInstance().isSignedIn.get()) {
+            // Tell them they need to sign in
+            return new Promise(function(res, rej) {
+                modalDialog.innerHTML = "";
+                mke(modalDialog, "div", {text: "You are out of local storage space. To continue processing, you must use Google Drive for additional storage.\n"});
+                var ok = mke(modalDialog, "button", {text: l("ok")});
+                ok.onclick = res;
+            });
+        }
+
+    }).then(function() {
         // Request sign-in
-        if (!gapi.auth2.getAuthInstance().isSignedIn.get())
+        if (!gapi.auth2.getAuthInstance().isSignedIn.get()) {
+            modal("Loading Google Drive...");
             return gapi.auth2.getAuthInstance().signIn();
+        }
 
     }).then(function() {
         driveLoggedIn = gapi.auth2.getAuthInstance().isSignedIn.get();
