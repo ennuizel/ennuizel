@@ -8,6 +8,7 @@ DEPS=libav/libav-1.3.4.1.3-fat.js \
 SRC=src/head.js \
 	src/view.js \
 	src/locale.js \
+	src/serialize.js \
 	src/db.js \
 	src/track.js \
 	src/filters.js \

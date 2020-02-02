@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Yahweasel 
+ * Copyright (c) 2019, 2020 Yahweasel
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -235,12 +235,12 @@ function loadProject() {
     //ez.dbCurrent = dbCurrent = localforage.createInstance({name:"ennuizel-project-" + projectName});
     ez.dbCurrent = dbCurrent = {
         getItem: function(item) {
-            if (item === "drive")
-                return Promise.resolve(true);
+            if (item === "overflow")
+                return Promise.resolve("drive");
             return Promise.resolve(null);
         },
         setItem: function(item) {
-            if (item === "drive")
+            if (item === "overflow")
                 return Promise.resolve(void 0);
             return Promise.reject({});
         },
@@ -254,8 +254,8 @@ function loadProject() {
     ez.dbDrive = dbDrive = null;
 
     // Check if we need to use Drive
-    return dbCurrent.getItem("drive").then(function(ret) {
-        if (ret)
+    return dbCurrent.getItem("overflow").then(function(ret) {
+        if (ret === "drive")
             return driveLogIn();
 
     }).then(function() {
@@ -512,7 +512,7 @@ function driveProject() {
 
         if (dbDrive) {
             // Indicate that we've used Drive for this project
-            return dbCurrent.setItem("drive", true).catch(function(){});
+            return dbCurrent.setItem("overflow", "drive").catch(function(){});
         }
 
     });
@@ -559,7 +559,7 @@ function driveReadFile(name) {
                         if (mime === "application/json") {
                             var j;
                             try {
-                                j = JSON.parse(xhr.responseText);
+                                j = deserialize(xhr.responseText);
                             } catch (ex) {
                                 rej(ex);
                             }
@@ -612,7 +612,7 @@ function driveCreateFile(name, content) {
     if (content instanceof ArrayBuffer)
         mime = "application/octet-stream";
     else
-        content = JSON.stringify(content);
+        content = serialize(content);
     file = new Blob([content], {type: mime});
 
     // First check for an existing file

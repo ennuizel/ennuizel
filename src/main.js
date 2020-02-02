@@ -79,8 +79,6 @@ Promise.all([]).then(function() {
      * (2) If we don't have persistence, ask for notifications, which are one
      *     feature that Chrome will turn into persistence permission
      * (3) Ask for persistence again
-     * (4) If we didn't get persistence, prefer WebSQL, with which Chrome will
-     *     give us a larger quota.
      */
     if (navigator.storage && navigator.storage.persisted)
         return navigator.storage.persisted();
@@ -115,17 +113,6 @@ Promise.all([]).then(function() {
         return warn(l("persistenceno"));
 
 }).then(function() {
-    if (!persistence) {
-        localforage.config({
-            driver: [
-                localforage.WEBSQL,
-                localforage.INDEXEDDB,
-                localforage.LOCALSTORAGE
-            ],
-            size: 1024*1024*1024
-        });
-    }
-
     return new Promise(function(res, rej) {
         if (LibAV.ready)
             res();
