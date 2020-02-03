@@ -268,18 +268,14 @@ function loadProject() {
     }).then(function(ret) {
         if (ret === null) {
             // Make basic global properties
-            ez.projectProperties = projectProperties = {
+            ret = {
                 name: projectName,
                 tracks: {},
                 trackOrder: [],
                 sampleRate: 48000
             };
-
-            // Update it
-            return projectPropertiesUpdate().then(dbCacheFlush);
         }
 
-        // Just get the properties
         ez.projectProperties = projectProperties = ret;
 
     }).then(function() {
