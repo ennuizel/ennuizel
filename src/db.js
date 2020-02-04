@@ -32,6 +32,11 @@ var dbDriveRoot;
 // Our current Drive DB (directory), used for the current project overflow
 var dbDrive;
 
+/* We need to make sure to serialize all accesses to Drive, because writing a
+ * file involves finding and deleting the existing file, then writing the new
+ * one */
+var drivePromise = Promise.all([]);
+
 // The name of our current project
 var projectName;
 
@@ -87,7 +92,14 @@ function dbCacheGet(item) {
     }).then(function(val) {
         if (!val && dbDrive) {
             // Check if it was in Drive
-            return driveReadFile(item);
+            var unlock;
+            return driveWait().then(function(unl) {
+                unlock = unl;
+                return driveReadFile(item);
+            }).then(function(ret) {
+                unlock();
+                return ret;
+            });
         } else {
             return val;
         }
@@ -149,13 +161,18 @@ ez.dbCacheFlush = dbCacheFlush;
 function dbSetSomewhere(item, value) {
     return dbCurrent.setItem(item, value).catch(function(ex) {
         // Set to Drive instead
-        return driveLogIn().then(function() {
+        var unlock;
+        return driveWait().then(function(unl) {
+            unlock = unl;
+            return driveLogIn();
+        }).then(function() {
             if (dbDrive) {
                 return dbCurrent.removeItem(item).then(function() {
-                    return driveCreateFile(item, value);
+                    return driveCreateFile(item, value).then(unlock);
                 });
             } else {
                 // Unrecoverable
+                unlock();
                 throw error(ex);
             }
         });
@@ -165,8 +182,15 @@ function dbSetSomewhere(item, value) {
 // Remove data from the current DB. Make sure to flush the cache first!
 function dbRemove(item) {
     return dbCurrent.removeItem(item).then(function() {
-        if (dbDrive)
-            return driveDeleteFile(item);
+        if (dbDrive) {
+            var unlock;
+            return driveWait().then(function(unl) {
+                unlock = unl;
+                return driveDeleteFile(item);
+            }).then(function() {
+                unlock();
+            });
+        }
     });
 }
 ez.dbRemove = dbRemove;
@@ -267,7 +291,12 @@ function loadProject() {
     // Check if we need to use Drive
     return dbCurrent.getItem("overflow").then(function(ret) {
         if (ret === "drive") {
-            return driveLogIn().then(function() {
+            var unlock;
+            return driveWait().then(function(unl) {
+                unlock = unl;
+                return driveLogIn();
+            }).then(function() {
+                unlock();
                 if (!dbDrive)
                     throw new Error(l("driveerror"));
             });
@@ -380,14 +409,31 @@ function deleteProject() {
 
     }).then(function() {
         // And possibly the Drive directory
-        if (dbDrive)
-            return gapi.client.drive.files.delete({
-                fileId: dbDrive
+        if (dbDrive) {
+            var unlock;
+            return driveWait().then(function(unl) {
+                unlock = unl;
+                return driveDelete();
+            }).then(function() {
+                unlock();
             });
+        }
 
     });
 }
 ez.deleteProject = deleteProject;
+
+/* Wait for sequential Drive access. Must be used to use any of the functions
+ * below. */
+function driveWait() {
+    return new Promise(function(res) {
+        drivePromise = drivePromise.then(function() {
+            return new Promise(function(unlock) {
+                res(unlock);
+            });
+        });
+    });
+}
 
 // Attempt to log into Drive
 function driveLogIn() {
@@ -674,5 +720,40 @@ function driveCreateFile(name, content) {
             xhr.send(form);
         });
 
+    });
+}
+
+/* Delete all our Drive files. Although Drive *seems* to work by just deleting
+ * the directory, if we try that, we'll end up with phantom files in the next
+ * round, so just delete everything. */
+function driveDelete() {
+    function deleteSome() {
+        return gapi.client.drive.files.list({
+            pageSize: 1000,
+            fields: "files(id)",
+            q: "'" + dbDrive + "' in parents"
+
+        }).then(function(page) {
+            page = page.result;
+            if (page.files.length === 0)
+                return;
+
+            // Make a promise per file
+            var p = Promise.all([]);
+            page.files.forEach(function(file) {
+                p = p.then(function() {
+                    return gapi.client.drive.files.delete({fileId: file.id})
+                });
+            });
+
+            return p.then(deleteSome());
+
+        });
+    }
+
+    return deleteSome().then(function() {
+        return gapi.client.drive.files.delete({
+            fileId: dbDrive
+        });
     });
 }
