@@ -254,14 +254,18 @@ function loadProject() {
         dropInstance: function() {
             return Promise.resolve();
         }
-    }; */
+    }; // */
 
     ez.dbDrive = dbDrive = null;
 
     // Check if we need to use Drive
     return dbCurrent.getItem("overflow").then(function(ret) {
-        if (ret === "drive")
-            return driveLogIn();
+        if (ret === "drive") {
+            return driveLogIn().then(function() {
+                if (!dbDrive)
+                    throw new Error(l("driveerror"));
+            });
+        }
 
     }).then(function() {
         // Check if the global properties already exist
@@ -429,7 +433,7 @@ function driveLogIn() {
             // Tell them they need to sign in
             return new Promise(function(res, rej) {
                 modalDialog.innerHTML = "";
-                mke(modalDialog, "div", {text: "You are out of local storage space. To continue processing, you must use Google Drive for additional storage.\n"});
+                mke(modalDialog, "div", {text: l("mustdrive") + "\n"});
                 var ok = mke(modalDialog, "button", {text: l("ok")});
                 ok.onclick = res;
             });
