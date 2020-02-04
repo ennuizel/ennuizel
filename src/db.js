@@ -441,6 +441,12 @@ function driveLogIn() {
         });
 
     }).then(function() {
+        // Wait for any active modal dialogues, just in case they've already asked for Drive
+        return modalWait();
+
+    }).then(function(unlock) {
+        unlock();
+
         if (!gapi.auth2.getAuthInstance().isSignedIn.get()) {
             // Tell them they need to sign in
             return warn(l("mustdrive"));
