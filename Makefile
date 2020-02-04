@@ -28,13 +28,12 @@ libav/libav-1.2.4.1.3-fat.js:
 	false
 
 FileSaver.min.js:
-	test -e node_modules/.bin/bower || npm install bower
-	test -e bower_modules/file-saver/dist/FileSaver.min.js || ./node_modules/.bin/bower install file-saver
+	test -e node_modules/file-saver/dist/FileSaver.min.js || npm install file-saver
 	( \
 		printf '/*\n' ; \
-		cat bower_components/file-saver/LICENSE.md ; \
+		cat node_modules/file-saver/LICENSE.md ; \
 		printf '*/\n' ; \
-		cat bower_components/file-saver/dist/FileSaver.min.js \
+		cat node_modules/file-saver/dist/FileSaver.min.js \
 	) > FileSaver.min.js
 
 localforage.min.js:
@@ -45,4 +44,4 @@ clean:
 	rm -f ennuizel.js ennuizel.min.js
 
 distclean: clean
-	rm -rf bower_components node_modules FileSaver.min.js localforage.min.js
+	rm -rf node_modules FileSaver.min.js localforage.min.js
