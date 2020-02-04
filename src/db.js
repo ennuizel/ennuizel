@@ -150,14 +150,16 @@ function dbSetSomewhere(item, value) {
     return dbCurrent.setItem(item, value).catch(function(ex) {
         // Set to Drive instead
         return driveLogIn().then(function() {
-            if (dbDrive)
+            if (dbDrive) {
                 return dbCurrent.removeItem(item).then(function() {
                     return driveCreateFile(item, value);
                 });
-            else
-                throw ex;
+            } else {
+                // Unrecoverable
+                throw error(ex);
+            }
         });
-    });
+    }).catch(error);
 }
 
 // Remove data from the current DB. Make sure to flush the cache first!

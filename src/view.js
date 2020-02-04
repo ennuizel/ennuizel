@@ -166,6 +166,9 @@ function error(ex) {
     del.onclick = function() {
         deleteProjectDialog();
     };
+
+    // Kill the rest of this promise chain
+    return new Promise(function(){});
 }
 ez.error = error;
 
