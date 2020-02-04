@@ -16,49 +16,57 @@
 
 // Dialog for the given libav filter
 function libAVFilterDialog(filter) {
-    // First we need to make the options
-    modalDialog.innerHTML = "";
+    return modalWait().then(function(unlock) {
+        // First we need to make the options
+        modalDialog.innerHTML = "";
 
-    mke(modalDialog, "div", {text: filter.name});
+        mke(modalDialog, "div", {text: filter.name});
 
-    var form = mke(modalDialog, "div", {"class": "modalform"});
+        var form = mke(modalDialog, "div", {"class": "modalform"});
 
-    var paramEls = [];
-    filter.params.forEach(function(param) {
-        var label = mke(form, "label", {"class": "inputlabel", text: param.name, "for": param.ff});
-        var el = mke(form, "input", {id: param.ff});
-        el.value = param["default"];
+        var paramEls = [];
+        filter.params.forEach(function(param) {
+            var label = mke(form, "label", {"class": "inputlabel", text: param.name, "for": param.ff});
+            var el = mke(form, "input", {id: param.ff});
+            el.value = param["default"];
 
-        // Limit it if applicable
-        if (param.type === "number") {
-            el.onchange = function() {
-                var val = +el.value;
-                if (""+val !== el.value) el.value = val;
-                if (val < param.min) el.value = param.min;
-                if (val > param.max) el.value = param.max;
+            // Limit it if applicable
+            if (param.type === "number") {
+                el.onchange = function() {
+                    var val = +el.value;
+                    if (""+val !== el.value) el.value = val;
+                    if (val < param.min) el.value = param.min;
+                    if (val > param.max) el.value = param.max;
+                };
+
+            } else if (param.type === "boolean") {
+                el.type = "checkbox";
+
+            }
+
+            paramEls.push(el);
+
+            mke(form, "br");
+        });
+
+        mke(modalDialog, "br");
+        var no = mke(modalDialog, "button", {text: l("cancel")});
+        mke(modalDialog, "span", {text: "  "});
+        var yes = mke(modalDialog, "button", {text: l("filter")});
+
+        modalToggle(true);
+        yes.focus();
+
+        return new Promise(function(res, rej) {
+            yes.onclick = function() {
+                unlock();
+                res(true);
             };
-
-        } else if (param.type === "boolean") {
-            el.type = "checkbox";
-
-        }
-
-        paramEls.push(el);
-
-        mke(form, "br");
-    });
-
-    mke(modalDialog, "br");
-    var no = mke(modalDialog, "button", {text: l("cancel")});
-    mke(modalDialog, "span", {text: "  "});
-    var yes = mke(modalDialog, "button", {text: l("filter")});
-
-    modalToggle(true);
-    yes.focus();
-
-    return new Promise(function(res, rej) {
-        yes.onclick = function() { res(true); };
-        no.onclick = function() { res(false); };
+            no.onclick = function() {
+                unlock();
+                res(false);
+            };
+        });
 
     }).then(function(go) {
         if (go) {

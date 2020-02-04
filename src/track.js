@@ -30,23 +30,28 @@
 
 // Import a track from a local file (dialog)
 function importTrackDialog() {
-    modalDialog.innerHTML = "";
+    return modalWait().then(function(unlock) {
+        modalDialog.innerHTML = "";
 
-    var input = mke(modalDialog, "input");
-    input.type = "file";
-    var cancel = mke(modalDialog, "button", {text: l("cancel")});
+        var input = mke(modalDialog, "input");
+        input.type = "file";
+        var cancel = mke(modalDialog, "button", {text: l("cancel")});
 
-    modalToggle(true);
-    input.focus();
+        modalToggle(true);
+        input.focus();
 
-    return new Promise(function(res, rej) {
-        input.onchange = function() {
-            if (input.files.length)
-                res(input);
-        };
-        cancel.onclick = function() {
-            res(null);
-        };
+        return new Promise(function(res, rej) {
+            input.onchange = function() {
+                if (input.files.length) {
+                    unlock();
+                    res(input);
+                }
+            };
+            cancel.onclick = function() {
+                unlock();
+                res(null);
+            };
+        });
 
     }).then(function(ret) {
         if (!ret) {
@@ -716,40 +721,49 @@ function setExportFormats() {
 
 // Since we export the project just by exporting each track, this actually belongs here
 function exportProjectDialog() {
-    modalDialog.innerHTML = "";
+    return modalWait().then(function(unlock) {
+        modalDialog.innerHTML = "";
 
-    var form = mke(modalDialog, "div", {"class": "modalform"});
+        var form = mke(modalDialog, "div", {"class": "modalform"});
 
-    mke(form, "label", {text: l("filename") + ":", "class": "inputlabel", "for": "filename"});
-    var nm = mke(form, "input", {id: "filename"});
-    nm.value = projectName;
-    mke(form, "br");
-    mke(form, "label", {text: l("format") + ":", "class": "inputlabel", "for": "format"});
-    var fmtSelect = mke(form, "select", {id: "format"});
-    for (var fi = 0; fi < exportFormats.length; fi++) {
-        var opt = mke(fmtSelect, "option", {text: exportFormats[fi].name});
-        opt.value = fi;
-    }
+        mke(form, "label", {text: l("filename") + ":", "class": "inputlabel", "for": "filename"});
+        var nm = mke(form, "input", {id: "filename"});
+        nm.value = projectName;
+        mke(form, "br");
+        mke(form, "label", {text: l("format") + ":", "class": "inputlabel", "for": "format"});
+        var fmtSelect = mke(form, "select", {id: "format"});
+        for (var fi = 0; fi < exportFormats.length; fi++) {
+            var opt = mke(fmtSelect, "option", {text: exportFormats[fi].name});
+            opt.value = fi;
+        }
 
-    mke(modalDialog, "div", {text: "\n\n"});
+        mke(modalDialog, "div", {text: "\n\n"});
 
-    var cancel = mke(modalDialog, "button", {text: l("cancel")});
-    mke(modalDialog, "span", {text: "  "});
-    var ok = mke(modalDialog, "button", {text: l("export")});
+        var cancel = mke(modalDialog, "button", {text: l("cancel")});
+        mke(modalDialog, "span", {text: "  "});
+        var ok = mke(modalDialog, "button", {text: l("export")});
 
-    modalToggle(true);
-    ok.focus();
+        modalToggle(true);
+        ok.focus();
 
-    return new Promise(function(res, rej) {
-        ok.onclick = function() { res(true); };
-        cancel.onclick = function() { res(false); };
+        return new Promise(function(res, rej) {
+            ok.onclick = function() {
+                unlock();
+                res(true);
+            };
+            cancel.onclick = function() {
+                unlock();
+                res(false);
+            };
+        });
+
     }).then(function(conf) {
         if (conf) {
             modal(l("exportinge"));
             return exportProject(nm.value, exportFormats[+fmtSelect.value]);
         }
     }).then(function() {
-        modal()
+        modal();
     }).catch(error);
 }
 

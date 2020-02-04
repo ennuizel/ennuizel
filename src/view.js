@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Yahweasel 
+ * Copyright (c) 2019, 2020 Yahweasel
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -116,7 +116,28 @@ function resetElements() {
 resetElements();
 ez.resetElements = resetElements;
 
-// Show/hide the modal dialog
+/* We may have many promise chains going in parallel, but only want one modal
+ * dialog at a time. So, we have a *separate* promise chain just for modal
+ * dialogs, and you must wait on it to use a modal. */
+var modalPromise = Promise.all([]);
+
+// When the modal returns to a "default" state, it shows this text
+var modalSimpleText = null;
+
+/* Wait for the modal dialog. Returned promise resolves to a function which you
+ * must call to unlock the next modal dialogue */
+function modalWait() {
+    return new Promise(function(res) {
+        modalPromise = modalPromise.then(function() {
+            return new Promise(function(unlock) {
+                res(unlock);
+            });
+        }).then(modalAuto);
+    });
+}
+ez.modalWait = modalWait;
+
+// Show/hide the modal dialog. Only use while you own the modal dialog
 function modalToggle(show) {
     if (typeof show === "undefined") show = !modalVisible;
     modalVisible = show;
@@ -129,43 +150,61 @@ function modalToggle(show) {
 }
 ez.modalToggle = modalToggle;
 
-// Common case of showing some text
-function modal(txt) {
-    if (txt) {
-        modalDialog.innerText = txt;
+// Show the modal simple text
+function modalAuto() {
+    if (modalSimpleText) {
+        modalDialog.innerText = modalSimpleText;
         modalToggle(true);
     } else {
         modalToggle(false);
     }
+
+    // Unlock immediately
+}
+ez.modalAuto = modalAuto;
+
+// Show this modal text. Safe to use unsafely (?), ignoring the resulting promise.
+function modal(txt) {
+    return modalWait().then(function(unlock) {
+        modalSimpleText = (txt || null);
+        modalAuto();
+        unlock();
+    });
 }
 ez.modal = modal;
 
 // Common case of showing an error
 function error(ex) {
-    modalDialog.innerHTML = "";
+    // Intentionally not returned
+    modalWait().then(function(unlock) {
+        modalDialog.innerHTML = "";
 
-    if (ex instanceof Error) {
-        ex = ex + "\n\n" + ex.stack;
-    } else if (typeof ex === "object") {
-        try {
-            ex = JSON.stringify(ex);
-        } catch (err) {}
-    }
+        if (ex instanceof Error) {
+            ex = ex + "\n\n" + ex.stack;
+        } else if (typeof ex === "object") {
+            try {
+                ex = JSON.stringify(ex);
+            } catch (err) {}
+        }
 
-    mke(modalDialog, "div", {text: l("error") + "\n\n" + l("errordetails") + ": " + ex + "\n\n"});
-    var resB = mke(modalDialog, "button", {text: l("restart")});
-    mke(modalDialog, "span", {text: "  "});
-    var del = mke(modalDialog, "button", {text: l("deleteproject")});
+        mke(modalDialog, "div", {text: l("error") + "\n\n" + l("errordetails") + ": " + ex + "\n\n"});
+        var resB = mke(modalDialog, "button", {text: l("restart")});
+        mke(modalDialog, "span", {text: "  "});
+        var del = mke(modalDialog, "button", {text: l("deleteproject")});
 
-    modalToggle(true);
-    resB.focus();
+        modalToggle(true);
+        resB.focus();
 
-    resB.onclick = function() {
-        restart();
-    };
-    del.onclick = function() {
-        deleteProjectDialog();
-    };
+        resB.onclick = function() {
+            unlock();
+            restart();
+        };
+        del.onclick = function() {
+            unlock();
+            deleteProjectDialog();
+        };
+
+    });
 
     // Kill the rest of this promise chain
     return new Promise(function(){});
@@ -174,27 +213,30 @@ ez.error = error;
 
 // Common case of showing a hidable warning
 function warn(ex) {
-    modalDialog.innerHTML = "";
+    return modalWait().then(function(unlock) {
+        modalDialog.innerHTML = "";
 
-    if (ex instanceof Error) {
-        ex = ex + "\n\n" + ex.stack;
-    } else if (typeof ex === "object") {
-        try {
-            ex = JSON.stringify(ex);
-        } catch (err) {}
-    }
+        if (ex instanceof Error) {
+            ex = ex + "\n\n" + ex.stack;
+        } else if (typeof ex === "object") {
+            try {
+                ex = JSON.stringify(ex);
+            } catch (err) {}
+        }
 
-    mke(modalDialog, "div", {text: ex + "\n\n"});
-    var button = mke(modalDialog, "button", {text: l("ok")});
+        mke(modalDialog, "div", {text: ex + "\n\n"});
+        var button = mke(modalDialog, "button", {text: l("ok")});
 
-    modalToggle(true);
-    button.focus();
+        modalToggle(true);
+        button.focus();
 
-    return new Promise(function(res, rej) {
-        button.onclick = function() {
-            modal();
-            res();
-        };
+        return new Promise(function(res, rej) {
+            button.onclick = function() {
+                unlock();
+                modal();
+                res();
+            };
+        });
     });
 }
 ez.warn = warn;
@@ -557,26 +599,33 @@ function updateTrackView(track) {
     trackView.optsButton.onclick = function(ev) {
         ev.stopPropagation();
 
-        modalDialog.innerHTML = "";
+        modalWait().then(function(unlock) {
+            modalDialog.innerHTML = "";
 
-        var del = mke(modalDialog, "button", {text: l("deletetrack")});
-        mke(modalDialog, "div", {text: "\n\n"});
-        var ren = mke(modalDialog, "button", {text: l("renametrack")});
-        mke(modalDialog, "div", {text: "\n\n"});
-        var cancel = mke(modalDialog, "button", {text: l("cancel")});
+            var del = mke(modalDialog, "button", {text: l("deletetrack")});
+            mke(modalDialog, "div", {text: "\n\n"});
+            var ren = mke(modalDialog, "button", {text: l("renametrack")});
+            mke(modalDialog, "div", {text: "\n\n"});
+            var cancel = mke(modalDialog, "button", {text: l("cancel")});
 
-        modalToggle(true);
-        cancel.focus();
+            modalToggle(true);
+            cancel.focus();
 
-        del.onclick = function() {
-            return deleteTrackDialog(track);
-        };
+            del.onclick = function() {
+                unlock();
+                return deleteTrackDialog(track);
+            };
 
-        ren.onclick = function() {
-            return renameTrackDialog(track);
-        };
+            ren.onclick = function() {
+                unlock();
+                return renameTrackDialog(track);
+            };
 
-        cancel.onclick = function() { modal(); };
+            cancel.onclick = function() {
+                unlock();
+                modal();
+            };
+        });
     };
 
     // No need to redraw if it's already cached
@@ -694,23 +743,29 @@ ez.selectTrack = selectTrack;
 
 // Dialog to delete a track
 function deleteTrackDialog(track) {
-    modalDialog.innerHTML = "";
+    return modalWait().then(function(unlock) {
+        modalDialog.innerHTML = "";
 
-    mke(modalDialog, "div", {text: l("areyousure") + "\n\n"});
-    var no = mke(modalDialog, "button", {text: l("cancel")});
-    mke(modalDialog, "span", {text: "  "});
-    var yes = mke(modalDialog, "button", {text: l("deletetrack")});
+        mke(modalDialog, "div", {text: l("areyousure") + "\n\n"});
+        var no = mke(modalDialog, "button", {text: l("cancel")});
+        mke(modalDialog, "span", {text: "  "});
+        var yes = mke(modalDialog, "button", {text: l("deletetrack")});
 
-    modalToggle(true);
-    no.focus();
+        modalToggle(true);
+        no.focus();
 
-    return new Promise(function(res, rej) {
-        yes.onclick = function() {
-            modal(l("deletinge"));
-            deleteTrack(track).then(res).catch(rej);
-        };
+        return new Promise(function(res, rej) {
+            yes.onclick = function() {
+                unlock();
+                modal(l("deletinge"));
+                deleteTrack(track).then(res).catch(rej);
+            };
 
-        no.onclick = res;
+            no.onclick = function() {
+                unlock();
+                res();
+            };
+        });
 
     }).then(function() {
         modal();
@@ -720,32 +775,36 @@ function deleteTrackDialog(track) {
 
 // Dialog to rename a track
 function renameTrackDialog(track) {
-    modalDialog.innerHTML = "";
+    return modalWait().then(function(unlock) {
+        modalDialog.innerHTML = "";
 
-    mke(modalDialog, "label", {text: l("newname") + ":", "class": "inputlabel", "for": "trackname"});
-    var nm = mke(modalDialog, "input", {id: "trackname"});
-    nm.value = track.name;
-    mke(modalDialog, "div", {text: "\n\n"});
-    var no = mke(modalDialog, "button", {text: l("cancel")});
-    mke(modalDialog, "span", {text: "  "});
-    var yes = mke(modalDialog, "button", {text: l("rename")});
+        mke(modalDialog, "label", {text: l("newname") + ":", "class": "inputlabel", "for": "trackname"});
+        var nm = mke(modalDialog, "input", {id: "trackname"});
+        nm.value = track.name;
+        mke(modalDialog, "div", {text: "\n\n"});
+        var no = mke(modalDialog, "button", {text: l("cancel")});
+        mke(modalDialog, "span", {text: "  "});
+        var yes = mke(modalDialog, "button", {text: l("rename")});
 
-    modalToggle(true);
-    nm.focus();
+        modalToggle(true);
+        nm.focus();
 
-    return new Promise(function(res, rej) {
-        yes.onclick = function() {
-            if (nm.value !== "") {
-                modal(l("renaminge"));
-                res(true);
-            } else {
-                nm.focus();
-            }
-        };
+        return new Promise(function(res, rej) {
+            yes.onclick = function() {
+                if (nm.value !== "") {
+                    unlock();
+                    modal(l("renaminge"));
+                    res(true);
+                } else {
+                    nm.focus();
+                }
+            };
 
-        no.onclick = function() {
-            res(false);
-        };
+            no.onclick = function() {
+                unlock();
+                res(false);
+            };
+        });
 
     }).then(function(doit) {
         if (doit) {

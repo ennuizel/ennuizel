@@ -153,10 +153,14 @@ ez.startup = startup;
 
 // Common startup/restart code
 function restart() {
-    return dbGlobal.getItem("projects").then(function(projects) {
+    var projects;
+    return dbGlobal.getItem("projects").then(function(ret) {
+        if (ret === null) ret = [];
+        projects = ret;
 
-        if (projects === null) projects = [];
+        return modalWait();
 
+    }).then(function(unlock) {
         // List the projects in the modal dialog
         modalDialog.innerHTML = "";
 
@@ -180,6 +184,7 @@ function restart() {
         return new Promise(function(res, rej) {
             select.onchange = function() {
                 if (select.value === "none") return;
+                unlock();
                 res(select.value);
             };
         });

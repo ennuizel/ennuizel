@@ -173,31 +173,37 @@ ez.dbRemove = dbRemove;
 
 // Create a new project (dialog)
 function newProjectDialog() {
-    // Show the name request
-    modalDialog.innerHTML = "";
-    mke(modalDialog, "label", {text: l("projectname") + ": ", "for": "projectname"});
-    var nmbox = mke(modalDialog, "input", {id: "projectname"});
-    mke(modalDialog, "div", {text: "\n"});
-    var ok = mke(modalDialog, "button", {text: l("ok")});
-    mke(modalDialog, "span", {text: "  "});
-    var cancel = mke(modalDialog, "button", {text: l("cancel")});
+    return modalWait().then(function(unlock) {
+        // Show the name request
+        modalDialog.innerHTML = "";
+        mke(modalDialog, "label", {text: l("projectname") + ": ", "for": "projectname"});
+        var nmbox = mke(modalDialog, "input", {id: "projectname"});
+        mke(modalDialog, "div", {text: "\n"});
+        var ok = mke(modalDialog, "button", {text: l("ok")});
+        mke(modalDialog, "span", {text: "  "});
+        var cancel = mke(modalDialog, "button", {text: l("cancel")});
 
-    modalToggle(true);
-    nmbox.focus();
+        modalToggle(true);
+        nmbox.focus();
 
-    // Now wait for acknowledgement
-    return new Promise(function(res, rej) {
-        nmbox.onkeypress = function(ev) {
-            if (nmbox.value.length > 0 && ev.keyCode === 13)
-                res();
-        };
+        // Now wait for acknowledgement
+        return new Promise(function(res, rej) {
+            nmbox.onkeypress = function(ev) {
+                if (nmbox.value.length > 0 && ev.keyCode === 13) {
+                    unlock();
+                    res();
+                }
+            };
 
-        ok.onclick = function() {
-            if (nmbox.value.length > 0)
-                res();
-        };
+            ok.onclick = function() {
+                if (nmbox.value.length > 0) {
+                    unlock();
+                    res();
+                }
+            };
 
-        cancel.onclick = rej;
+            cancel.onclick = rej;
+        });
 
     }).then(function() {
         ez.projectName = nmbox.value;
@@ -329,23 +335,29 @@ ez.nonemptyTracks = nonemptyTracks;
 
 // Delete the current project (dialog)
 function deleteProjectDialog() {
-    // Give them a chance to assert
-    modalDialog.innerHTML = "";
+    return modalWait().then(function(unlock) {
+        // Give them a chance to assert
+        modalDialog.innerHTML = "";
 
-    mke(modalDialog, "div", {text: l("areyousure") + "\n\n"});
-    var no = mke(modalDialog, "button", {text: l("cancel")});
-    mke(modalDialog, "span", {text: "  "});
-    var yes = mke(modalDialog, "button", {text: l("deleteproject")});
+        mke(modalDialog, "div", {text: l("areyousure") + "\n\n"});
+        var no = mke(modalDialog, "button", {text: l("cancel")});
+        mke(modalDialog, "span", {text: "  "});
+        var yes = mke(modalDialog, "button", {text: l("deleteproject")});
 
-    modalToggle(true);
-    no.focus();
+        modalToggle(true);
+        no.focus();
 
-    return new Promise(function(res, rej) {
-        yes.onclick = function() {
-            modal(l("deletinge"));
-            deleteProject().then(res).catch(rej);
-        };
-        no.onclick = rej;
+        return new Promise(function(res, rej) {
+            yes.onclick = function() {
+                unlock();
+                modal(l("deletinge"));
+                deleteProject().then(res).catch(rej);
+            };
+            no.onclick = function() {
+                unlock();
+                rej();
+            };
+        });
     }).then(restart).catch(function() { modal(); });
 }
 
@@ -431,12 +443,7 @@ function driveLogIn() {
     }).then(function() {
         if (!gapi.auth2.getAuthInstance().isSignedIn.get()) {
             // Tell them they need to sign in
-            return new Promise(function(res, rej) {
-                modalDialog.innerHTML = "";
-                mke(modalDialog, "div", {text: l("mustdrive") + "\n"});
-                var ok = mke(modalDialog, "button", {text: l("ok")});
-                ok.onclick = res;
-            });
+            return warn(l("mustdrive"));
         }
 
     }).then(function() {
