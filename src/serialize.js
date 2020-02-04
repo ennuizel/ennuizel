@@ -17,8 +17,7 @@
 // Serialize an object which may contain typed arrays
 function serialize(obj) {
     var t = [];
-    serializeParts([], obj, t);
-    return JSON.stringify({d: obj, t: t});
+    return JSON.stringify({d: serializeParts([], obj, t), t: t});
 }
 
 // Serialize one level of depth
@@ -27,24 +26,59 @@ function serializeParts(path, obj, types) {
 
     if (baseType === "[object Array]") {
         // Serialize an array
-        for (var i = 0; i < obj.length; i++)
-            serializeParts(path.concat([i]), obj[i], types);
+        var dup = null;
+        for (var i = 0; i < obj.length; i++) {
+            var oel = obj[i];
+            var nel = serializeParts(path.concat([i]), obj[i], types);
+            if (oel !== nel) {
+                if (!dup)
+                    dup = new Array(obj.length)
+                dup[i] = nel;
+            }
+        }
+        if (dup) {
+            for (var i = 0; i < obj.length; i++) {
+                if (!dup[i])
+                    dup[i] = obj[i];
+            }
+        }
+        return dup || obj;
 
     } else if (typeof obj === "object") {
         // Some object type, maybe be careful of the type
         var typedArray = /^\[object ([A-Za-z0-9]+Array)\]$/.exec(baseType);
 
         if (typedArray) {
-            // It was a typed array!
-            types.push({p: path, t: typedArray[1], l: obj.length});
-            return;
+            // It was a typed array, so serialize it as a string
+            types.push({p: path, t: typedArray[1]});
+            var u8 = new Uint8Array(obj.buffer);
+            var s = "";
+            for (var i = 0; i < u8.length; i++)
+                s += String.fromCharCode(u8[i] + 0x20);
+            return s;
         }
 
         // Follow through
-        for (var key in obj)
-            serializeParts(path.concat([key]), obj[key], types);
+        var dup = null;
+        for (var key in obj) {
+            var oel = obj[key];
+            var nel = serializeParts(path.concat([key]), obj[key], types);
+            if (oel !== nel) {
+                if (!dup)
+                    dup = {};
+                dup[key] = nel;
+            }
+        }
+        if (dup) {
+            for (var key in obj) {
+                if (!(key in dup))
+                    dup[key] = obj[key];
+            }
+        }
 
-    }
+        return dup || obj;
+
+    } else return obj;
 }
 
 // Deserialize
@@ -53,9 +87,17 @@ function deserialize(str) {
 
     // Apply each type conversion
     dat.t.forEach(function(conv) {
-        var val = serget(dat, conv.p);
-        val.length = conv.l;
-        serset(dat, conv.p, new (window[conv.t])(val));
+        var s = serget(dat, conv.p);
+
+        // Convert the string to a Uint8Array
+        var u8 = new Uint8Array(s.length);
+        for (var i = 0; i < s.length; i++)
+            u8[i] = s.charCodeAt(i) - 0x20;
+
+        // Then the proper type
+        var v = new (window[conv.t])(u8.buffer);
+
+        serset(dat, conv.p, v);
     });
 
     return dat.d;

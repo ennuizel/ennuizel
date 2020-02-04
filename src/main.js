@@ -24,7 +24,7 @@ var libavSrc = "libav/libav-1.3.4.1.3-fat.js";
 var maxReadSize = 8*1024*1024;
 
 // The maximum size of a fragment store in our DB, in seconds
-var maxFragment = 15;
+var maxFragment = 60;
 
 // Utility functions
 function randomId() {
