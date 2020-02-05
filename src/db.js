@@ -743,11 +743,11 @@ function driveDelete() {
             var p = Promise.all([]);
             page.files.forEach(function(file) {
                 p = p.then(function() {
-                    return gapi.client.drive.files.delete({fileId: file.id})
+                    return gapi.client.drive.files.delete({fileId: file.id});
                 });
             });
 
-            return p.then(deleteSome());
+            return p.then(deleteSome);
 
         });
     }
