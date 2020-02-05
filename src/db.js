@@ -66,12 +66,9 @@ function dbWait() {
     });
 }
 
-// Get an item out of the cache
-function dbCacheGet(item) {
-    var unlock;
-    return dbWait().then(function(unl) {
-        unlock = unl;
-
+// Get an item out of the cache, no locking
+function dbCacheGetUnlocked(item) {
+    return Promise.all([]).then(function() {
         if (item in dbCache.cache) {
             // Put it at the end of the LRU list
             var idx = dbCache.ids.indexOf(item);
@@ -116,14 +113,27 @@ function dbCacheGet(item) {
             return val;
         }
 
+    }).then(function(val) {
+        dbCache.ids.push(item);
+        dbCache.cache[item] = val;
+        dbCache.changed[item] = false;
+        return val;
+
+    });
+}
+
+// Get an item out of the cache, locked
+function dbCacheGet(item) {
+    var unlock;
+    return dbWait().then(function(unl) {
+        unlock = unl;
+        return dbCacheGetUnlocked(item);
+
     }).catch(function(ex) {
         unlock();
         throw ex;
 
     }).then(function(val) {
-        dbCache.ids.push(item);
-        dbCache.cache[item] = val;
-        dbCache.changed[item] = false;
         unlock();
         return val;
 
@@ -149,7 +159,7 @@ function dbCacheSet(item, value) {
         }
 
         // Get it to bring it into the cache first
-        return dbCacheGet(item).then(function() {
+        return dbCacheGetUnlocked(item).then(function() {
             dbCache.cache[item] = value;
             dbCache.changed[item] = true;
             return;
@@ -317,33 +327,43 @@ function loadProject() {
 
     menuTitle.innerText = l("project") + ": " + projectName;
     resetElements();
-    dbCacheFlush();
-    ez.dbCurrent = dbCurrent = localforage.createInstance({name:"ennuizel-project-" + projectName});
 
-    /* Debugging fake DB for Drive testing:
-    ez.dbCurrent = dbCurrent = {
-        getItem: function(item) {
-            if (item === "overflow")
-                return Promise.resolve("drive");
-            return Promise.resolve(null);
-        },
-        setItem: function(item) {
-            if (item === "overflow")
-                return Promise.resolve(void 0);
-            return Promise.reject({});
-        },
-        removeItem: function() {
-            return Promise.resolve();
-        },
-        dropInstance: function() {
-            return Promise.resolve();
-        }
-    }; // */
+    return dbCacheFlush().then(function() {
+        // Fresh DB cache and DB
+        dbCache = {
+            cache: {},
+            changed: {},
+            ids: []
+        };
 
-    dbDrive = dbDriveCache = null;
+        ez.dbCurrent = dbCurrent = localforage.createInstance({name:"ennuizel-project-" + projectName});
 
-    // Check if we need to use Drive
-    return dbCurrent.getItem("overflow").then(function(ret) {
+        /* Debugging fake DB for Drive testing:
+        ez.dbCurrent = dbCurrent = {
+            getItem: function(item) {
+                if (item === "overflow")
+                    return Promise.resolve("drive");
+                return Promise.resolve(null);
+            },
+            setItem: function(item) {
+                if (item === "overflow")
+                    return Promise.resolve(void 0);
+                return Promise.reject({});
+            },
+            removeItem: function() {
+                return Promise.resolve();
+            },
+            dropInstance: function() {
+                return Promise.resolve();
+            }
+        }; // */
+
+        dbDrive = dbDriveCache = null;
+
+        // Check if we need to use Drive
+        return dbCurrent.getItem("overflow");
+
+    }).then(function(ret) {
         if (ret === "drive") {
             return driveLogIn().then(function() {
                 if (!dbDrive)
