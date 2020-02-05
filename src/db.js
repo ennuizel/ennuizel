@@ -35,10 +35,9 @@ var dbDrive;
 // To avoid Drive requests for stuff we already know, we cache the filename->ID associations
 var dbDriveCache;
 
-/* We need to make sure to serialize all accesses to Drive, because writing a
- * file involves finding and deleting the existing file, then writing the new
- * one */
-var drivePromise = Promise.all([]);
+/* Because flushes can happen on any access, we need to serialize our database
+ * acceses */
+var dbPromise = Promise.all([]);
 
 // The name of our current project
 var projectName;
@@ -56,144 +55,199 @@ var dbCache = {
     ids: []
 };
 
+// Wait for sequential DB access
+function dbWait() {
+    return new Promise(function(res) {
+        dbPromise = dbPromise.then(function() {
+            return new Promise(function(unlock) {
+                res(unlock);
+            });
+        });
+    });
+}
+
 // Get an item out of the cache
 function dbCacheGet(item) {
-    if (item in dbCache.cache) {
-        // Put it at the end of the LRU list
-        var idx = dbCache.ids.indexOf(item);
-        if (idx >= 0)
-            dbCache.ids.splice(idx, 1);
-        dbCache.ids.push(item);
+    var unlock;
+    return dbWait().then(function(unl) {
+        unlock = unl;
 
-        // Then return the cached value
-        return Promise.resolve(dbCache.cache[item]);
-    }
+        if (item in dbCache.cache) {
+            // Put it at the end of the LRU list
+            var idx = dbCache.ids.indexOf(item);
+            if (idx >= 0)
+                dbCache.ids.splice(idx, 1);
+            dbCache.ids.push(item);
 
-    var limit = ((projectProperties && projectProperties.trackOrder) ?
-        projectProperties.trackOrder.length : 0) + 3;
-
-    var p;
-    if (dbCache.ids.length >= limit) {
-        // Dump something from the cache
-        var d = dbCache.ids.shift();
-        var v = dbCache.cache[d];
-        delete dbCache.cache[d];
-        var c = dbCache.changed[d];
-        delete dbCache.changed[d];
-
-        if (c) {
-            // Flush it to the database
-            p = dbSetSomewhere(d, v);
-        } else {
-            p = Promise.all([]);
+            // Then return the cached value
+            return dbCache.cache[item];
         }
-    } else
-        p = Promise.all([]);
 
-    return p.then(function() {
-        return dbCurrent.getItem(item);
+        var limit = ((projectProperties && projectProperties.trackOrder) ?
+            projectProperties.trackOrder.length : 0) + 3;
+
+        if (dbCache.ids.length >= limit) {
+            // Dump something from the cache
+            var d = dbCache.ids.shift();
+            var v = dbCache.cache[d];
+            delete dbCache.cache[d];
+            var c = dbCache.changed[d];
+            delete dbCache.changed[d];
+
+            if (c) {
+                // Flush it to the database
+                return dbSetSomewhere(d, v).then(function() { return null; });
+            }
+        }
+
     }).then(function(val) {
-        if (!val && dbDrive) {
-            // Check if it was in Drive
-            var unlock;
-            return driveWait().then(function(unl) {
-                unlock = unl;
-                return driveReadFile(item);
-            }).then(function(ret) {
-                unlock();
-                return ret;
-            });
+        if (!val) {
+            // Try local storage
+            return dbCurrent.getItem(item);
         } else {
             return val;
         }
+
+    }).then(function(val) {
+        if (!val && dbDrive) {
+            // Check if it was in Drive
+            return driveReadFile(item);
+        } else {
+            return val;
+        }
+
+    }).catch(function(ex) {
+        unlock();
+        throw ex;
+
     }).then(function(val) {
         dbCache.ids.push(item);
         dbCache.cache[item] = val;
         dbCache.changed[item] = false;
-        return Promise.resolve(val);
+        unlock();
+        return val;
+
     });
 }
 ez.dbCacheGet = dbCacheGet;
 
 // Set an item via the cache
 function dbCacheSet(item, value) {
-    if (item in dbCache.cache) {
-        var idx = dbCache.ids.indexOf(item);
-        if (idx >= 0)
-            dbCache.ids.splice(idx, 1);
-        dbCache.ids.push(item);
-        dbCache.cache[item] = value;
-        dbCache.changed[item] = true;
-        return Promise.all([]);
-    }
+    var unlock;
+    return dbWait().then(function(unl) {
+        unlock = unl;
 
-    // Get it to bring it into the cache first
-    return dbCacheGet(item).then(function() {
-        dbCache.cache[item] = value;
-        dbCache.changed[item] = true;
+        // If it's in the cache, just update it
+        if (item in dbCache.cache) {
+            var idx = dbCache.ids.indexOf(item);
+            if (idx >= 0)
+                dbCache.ids.splice(idx, 1);
+            dbCache.ids.push(item);
+            dbCache.cache[item] = value;
+            dbCache.changed[item] = true;
+            return;
+        }
+
+        // Get it to bring it into the cache first
+        return dbCacheGet(item).then(function() {
+            dbCache.cache[item] = value;
+            dbCache.changed[item] = true;
+            return;
+        });
+
+    }).catch(function(ex) {
+        unlock();
+        throw ex;
+
+    }).then(function() {
+        unlock();
+
     });
 }
 ez.dbCacheSet = dbCacheSet;
 
 // Flush the cache to the DB
 function dbCacheFlush() {
-    function flush() {
-        // Find a changed item
-        var item = null;
-        while (dbCache.ids.length) {
-            item = dbCache.ids.shift();
-            if (dbCache.changed[item])
-                break;
-            else
-                item = null;
-        }
-        if (!item)
-            return Promise.all([]);
+    var unlock;
+    return dbWait().then(function(unl) {
+        unlock = unl;
 
-        // And flush its value
-        var value = dbCache.cache[item];
-        delete dbCache.cache[item];
-        return dbSetSomewhere(item, value).then(flush);
-    }
+        var p = Promise.all([]);
 
-    return flush();
+        dbCache.ids.forEach(function(item) {
+            if (dbCache.changed[item]) {
+                var value = dbCache.cache[item];
+                dbCache.changed[item] = false;
+                p = p.then(function() {
+                    return dbSetSomewhere(item, value);
+                });
+            }
+        });
+
+        return p;
+
+    }).catch(function(ex) {
+        unlock();
+        throw ex;
+
+    }).then(function() {
+        unlock();
+
+    });
 }
 ez.dbCacheFlush = dbCacheFlush;
 
 // Try very hard to set this SOMEWHERE
 function dbSetSomewhere(item, value) {
+    if (item === "properties" && typeof value !== "object") {
+        alert("dbSetSomewhere of bad properties???\n\n" + value + "\n\n" + (new Error().stack));
+    }
     return dbCurrent.setItem(item, value).catch(function(ex) {
         // Set to Drive instead
-        var unlock;
-        return driveWait().then(function(unl) {
-            unlock = unl;
-            return driveLogIn();
-        }).then(function() {
+        return driveLogIn().then(function() {
             if (dbDrive) {
                 return dbCurrent.removeItem(item).then(function() {
-                    return driveCreateFile(item, value).then(unlock);
+                    return driveCreateFile(item, value);
                 });
             } else {
                 // Unrecoverable
-                unlock();
                 throw error(ex);
             }
         });
-    }).catch(error);
+    });
 }
 
-// Remove data from the current DB. Make sure to flush the cache first!
+// Remove data from the current DB
 function dbRemove(item) {
-    return dbCurrent.removeItem(item).then(function() {
-        if (dbDrive) {
-            var unlock;
-            return driveWait().then(function(unl) {
-                unlock = unl;
-                return driveDeleteFile(item);
-            }).then(function() {
-                unlock();
-            });
+    var unlock;
+    return dbWait().then(function(unl) {
+        unlock = unl;
+
+        // First from the cache
+        if (item in dbCache.cache) {
+            var idx = dbCache.ids.indexOf(item);
+            if (idx >= 0)
+                dbCache.ids.splice(idx, 1);
+            delete dbCache.cache[item];
+            delete dbCache.changed[item];
         }
+
+        // Then from local storage
+        return dbCurrent.removeItem(item);
+
+    }).then(function() {
+        // Then from Drive
+        if (dbDrive) {
+            return driveDeleteFile(item);
+        }
+
+    }).catch(function(ex) {
+        unlock();
+        throw ex;
+
+    }).then(function() {
+        unlock();
+
     });
 }
 ez.dbRemove = dbRemove;
@@ -294,12 +348,7 @@ function loadProject() {
     // Check if we need to use Drive
     return dbCurrent.getItem("overflow").then(function(ret) {
         if (ret === "drive") {
-            var unlock;
-            return driveWait().then(function(unl) {
-                unlock = unl;
-                return driveLogIn();
-            }).then(function() {
-                unlock();
+            return driveLogIn().then(function() {
                 if (!dbDrive)
                     throw new Error(l("driveerror"));
             });
@@ -412,31 +461,12 @@ function deleteProject() {
 
     }).then(function() {
         // And possibly the Drive directory
-        if (dbDrive) {
-            var unlock;
-            return driveWait().then(function(unl) {
-                unlock = unl;
-                return driveDelete();
-            }).then(function() {
-                unlock();
-            });
-        }
+        if (dbDrive)
+            return driveDelete();
 
     });
 }
 ez.deleteProject = deleteProject;
-
-/* Wait for sequential Drive access. Must be used to use any of the functions
- * below. */
-function driveWait() {
-    return new Promise(function(res) {
-        drivePromise = drivePromise.then(function() {
-            return new Promise(function(unlock) {
-                res(unlock);
-            });
-        });
-    });
-}
 
 // Attempt to log into Drive
 function driveLogIn() {
@@ -490,12 +520,6 @@ function driveLogIn() {
         });
 
     }).then(function() {
-        // Wait for any active modal dialogues, just in case they've already asked for Drive
-        return modalWait();
-
-    }).then(function(unlock) {
-        unlock();
-
         if (!gapi.auth2.getAuthInstance().isSignedIn.get()) {
             // Tell them they need to sign in
             return warn(l("mustdrive"));
