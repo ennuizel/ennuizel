@@ -631,13 +631,14 @@ function driveReadFile(name) {
                         if (xhr.readyState !== 4) return;
 
                         if (mime === "application/json") {
-                            var j;
+                            var j, des = false;
                             try {
                                 j = deserialize(xhr.responseText);
+                                des = true;
                             } catch (ex) {
                                 rej(ex);
                             }
-                            if (j)
+                            if (des)
                                 res(j);
 
                         } else {
