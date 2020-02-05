@@ -37,6 +37,7 @@
     "exportingx":           "Exporting %1",
 
     "mustdrive":            "You are out of local storage space. To continue processing, you must use Google Drive for additional storage.",
+    "loadingdrivee":        "Loading Google Drive...",
     "driveerror":           "Google Drive access refused",
 
     "error":                "Ennuizel has encountered an error!",

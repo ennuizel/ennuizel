@@ -482,7 +482,7 @@ function driveLogIn() {
     return new Promise(function(res, rej) {
         // Tell them we're loading
         if (!modalWasVisible)
-            modal("Loading Google Drive...");
+            modal(l("loadingdrivee"));
 
         // Load the credentials
         xhr = new XMLHttpRequest();
@@ -528,7 +528,7 @@ function driveLogIn() {
     }).then(function() {
         // Request sign-in
         if (!gapi.auth2.getAuthInstance().isSignedIn.get()) {
-            modal("Loading Google Drive...");
+            modal(l("loadingdrivee"));
             return gapi.auth2.getAuthInstance().signIn();
         }
 
