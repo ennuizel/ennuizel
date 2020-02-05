@@ -461,6 +461,9 @@ function deleteProjectDialog() {
 
 // Delete the current project
 function deleteProject() {
+    // Clear the screen
+    trackSpace.innerHTML = "";
+
     // First delete it from the global projects list
     return dbGlobal.getItem("projects").then(function(projects) {
         if (projects === null) projects = [];
