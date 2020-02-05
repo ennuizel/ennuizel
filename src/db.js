@@ -32,6 +32,9 @@ var dbDriveRoot;
 // Our current Drive DB (directory), used for the current project overflow
 var dbDrive;
 
+// To avoid Drive requests for stuff we already know, we cache the filename->ID associations
+var dbDriveCache;
+
 /* We need to make sure to serialize all accesses to Drive, because writing a
  * file involves finding and deleting the existing file, then writing the new
  * one */
@@ -286,7 +289,7 @@ function loadProject() {
         }
     }; // */
 
-    ez.dbDrive = dbDrive = null;
+    dbDrive = dbDriveCache = null;
 
     // Check if we need to use Drive
     return dbCurrent.getItem("overflow").then(function(ret) {
@@ -559,7 +562,7 @@ function driveLogIn() {
 
 // Find or create the project in Drive
 function driveProject() {
-    dbDrive = null;
+    dbDrive = dbDriveCache = null;
     var dname = ("project-" + projectName).replace(/'/g, "_");
 
     return gapi.client.drive.files.list({
@@ -570,7 +573,12 @@ function driveProject() {
     }).then(function(page) {
         if (page.result.files.length) {
             dbDrive = page.result.files[0].id;
-            return null;
+
+            // The existing directory may not be empty
+            return driveList().then(function(l) {
+                dbDriveCache = l;
+                return null;
+            });
 
         } else {
             return gapi.client.drive.files.create({
@@ -581,8 +589,10 @@ function driveProject() {
         }
 
     }).then(function(dir) {
-        if (dir)
+        if (dir) {
             dbDrive = dir.result.id;
+            dbDriveCache = {};
+        }
 
         if (dbDrive) {
             // Indicate that we've used Drive for this project
@@ -592,73 +602,82 @@ function driveProject() {
     });
 }
 
-// Find a file on Drive
-function driveFindFile(name) {
-    name = name.replace(/'/g, "_");
-    return gapi.client.drive.files.list({
-        pageSize: 1000,
-        fields: "files(id)",
-        q: "'" + dbDrive + "' in parents and name = '" + name + "'"
+// List all the files on Drive
+function driveList() {
+    var ret = {};
 
-    }).then(function(page) {
-        if (page.result.files.length)
-            return page.result.files[0].id;
-        return null;
+    function listSome(token) {
+        return gapi.client.drive.files.list({
+            pageToken: token,
+            pageSize: 1000,
+            fields: "nextPageToken, files(name, id)",
+            q: "'" + dbDrive + "' in parents"
 
-    });
+        }).then(function(page) {
+            page.result.files.forEach(function(file) {
+                ret[file.name] = file.id;
+            });
+
+            if (page.result.nextPageToken)
+                return listSome(page.result.nextPageToken);
+            else
+                return ret;
+        });
+    }
+
+    return listSome();
 }
 
 // Get the content of a file on Drive
 function driveReadFile(name) {
     name = name.replace(/'/g, "_");
 
-    return driveFindFile(name).then(function(id) {
-        if (id) {
-            var mime;
+    if (!(name in dbDriveCache))
+        return Promise.resolve(null);
 
-            // Read its metadata
-            return gapi.client.drive.files.get({
-                fileId: id,
-                fields: "mimeType"
-            }).then(function(response) {
-                mime = response.result.mimeType;
+    var id = dbDriveCache[name];
+    var mime;
 
-                // Then read the content manually
-                return new Promise(function(res, rej) {
-                    var xhr = new XMLHttpRequest();
+    // Read its metadata
+    return gapi.client.drive.files.get({
+        fileId: id,
+        fields: "mimeType"
+    }).then(function(response) {
+        mime = response.result.mimeType;
 
-                    xhr.onreadystatechange = function() {
-                        if (xhr.readyState !== 4) return;
+        // Then read the content manually
+        return new Promise(function(res, rej) {
+            var xhr = new XMLHttpRequest();
 
-                        if (mime === "application/json") {
-                            var j, des = false;
-                            try {
-                                j = deserialize(xhr.responseText);
-                                des = true;
-                            } catch (ex) {
-                                rej(ex);
-                            }
-                            if (des)
-                                res(j);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState !== 4) return;
 
-                        } else {
-                            // Raw data
-                            res(new Uint8Array(xhr.response));
-
-                        }
-                    };
-
-                    xhr.open("GET", "https://www.googleapis.com/drive/v3/files/" + id + "?alt=media");
-                    xhr.setRequestHeader("Authorization", "Bearer " + gapi.auth.getToken().access_token);
-                    if (mime !== "application/json") {
-                        // Raw data
-                        xhr.responseType = "arraybuffer";
+                if (mime === "application/json") {
+                    var j, des = false;
+                    try {
+                        j = deserialize(xhr.responseText);
+                        des = true;
+                    } catch (ex) {
+                        rej(ex);
                     }
-                    xhr.send();
-                });
-            });
+                    if (des)
+                        res(j);
 
-        } else return null;
+                } else {
+                    // Raw data
+                    res(new Uint8Array(xhr.response));
+
+                }
+            };
+
+            xhr.open("GET", "https://www.googleapis.com/drive/v3/files/" + id + "?alt=media");
+            xhr.setRequestHeader("Authorization", "Bearer " + gapi.auth.getToken().access_token);
+            if (mime !== "application/json") {
+                // Raw data
+                xhr.responseType = "arraybuffer";
+            }
+            xhr.send();
+        });
     });
 }
 
@@ -666,13 +685,13 @@ function driveReadFile(name) {
 function driveDeleteFile(name) {
     name = name.replace(/'/g, "_");
 
-    return driveFindFile(name).then(function(id) {
-        if (id) {
-            return gapi.client.drive.files.delete({
-                fileId: id
-            });
-        }
-    });
+    if (!(name in dbDriveCache))
+        return Promise.all([]);
+
+    var id = dbDriveCache[name];
+    delete dbDriveCache[name];
+
+    return gapi.client.drive.files.delete({fileId: id});
 }
 
 // Create a file on Drive, deleting the existing one first if necessary
@@ -704,8 +723,10 @@ function driveCreateFile(name, content) {
                 } catch (ex) {
                     rej(ex);
                 }
-                if (id)
+                if (id) {
+                    dbDriveCache[name] = id.id;
                     res(id.id);
+                }
             }
 
             xhr.open("POST", "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id");
