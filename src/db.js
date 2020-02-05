@@ -199,9 +199,6 @@ ez.dbCacheFlush = dbCacheFlush;
 
 // Try very hard to set this SOMEWHERE
 function dbSetSomewhere(item, value) {
-    if (item === "properties" && typeof value !== "object") {
-        alert("dbSetSomewhere of bad properties???\n\n" + value + "\n\n" + (new Error().stack));
-    }
     return dbCurrent.setItem(item, value).catch(function(ex) {
         // Set to Drive instead
         return driveLogIn().then(function() {
