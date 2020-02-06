@@ -16,6 +16,7 @@
 
 // Dialog for the given libav filter
 function libAVFilterDialog(filter) {
+    var paramEls = [];
     return modalWait().then(function(unlock) {
         // First we need to make the options
         modalDialog.innerHTML = "";
@@ -24,7 +25,6 @@ function libAVFilterDialog(filter) {
 
         var form = mke(modalDialog, "div", {"class": "modalform"});
 
-        var paramEls = [];
         filter.params.forEach(function(param) {
             var label = mke(form, "label", {"class": "inputlabel", text: param.name, "for": param.ff});
             var el = mke(form, "input", {id: param.ff});
