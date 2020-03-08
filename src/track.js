@@ -721,17 +721,19 @@ function setExportFormats() {
 
 // Since we export the project just by exporting each track, this actually belongs here
 function exportProjectDialog() {
+    var nm, fmtSelect;
+
     return modalWait().then(function(unlock) {
         modalDialog.innerHTML = "";
 
         var form = mke(modalDialog, "div", {"class": "modalform"});
 
         mke(form, "label", {text: l("filename") + ":", "class": "inputlabel", "for": "filename"});
-        var nm = mke(form, "input", {id: "filename"});
+        nm = mke(form, "input", {id: "filename"});
         nm.value = projectName;
         mke(form, "br");
         mke(form, "label", {text: l("format") + ":", "class": "inputlabel", "for": "format"});
-        var fmtSelect = mke(form, "select", {id: "format"});
+        fmtSelect = mke(form, "select", {id: "format"});
         for (var fi = 0; fi < exportFormats.length; fi++) {
             var opt = mke(fmtSelect, "option", {text: exportFormats[fi].name});
             opt.value = fi;

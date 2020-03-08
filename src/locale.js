@@ -19,7 +19,7 @@
  */
 
 // All supported languages
-var langs = ["en", "it"];
+var langs = ["en", "it", "ja", "ko"];
 
 // Our localized strings in each supported language (usually just en+native)
 var locale = {};
