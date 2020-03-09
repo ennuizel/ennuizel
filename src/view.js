@@ -775,11 +775,12 @@ function deleteTrackDialog(track) {
 
 // Dialog to rename a track
 function renameTrackDialog(track) {
+    var nm;
     return modalWait().then(function(unlock) {
         modalDialog.innerHTML = "";
 
         mke(modalDialog, "label", {text: l("newname") + ":", "class": "inputlabel", "for": "trackname"});
-        var nm = mke(modalDialog, "input", {id: "trackname"});
+        nm = mke(modalDialog, "input", {id: "trackname"});
         nm.value = track.name;
         mke(modalDialog, "div", {text: "\n\n"});
         var no = mke(modalDialog, "button", {text: l("cancel")});
