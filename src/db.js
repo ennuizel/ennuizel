@@ -261,11 +261,12 @@ ez.dbRemove = dbRemove;
 
 // Create a new project (dialog)
 function newProjectDialog() {
+    var nmbox;
     return modalWait().then(function(unlock) {
         // Show the name request
         modalDialog.innerHTML = "";
         mke(modalDialog, "label", {text: l("projectname") + ": ", "for": "projectname"});
-        var nmbox = mke(modalDialog, "input", {id: "projectname"});
+        nmbox = mke(modalDialog, "input", {id: "projectname"});
         mke(modalDialog, "div", {text: "\n"});
         var ok = mke(modalDialog, "button", {text: l("ok")});
         mke(modalDialog, "span", {text: "  "});
