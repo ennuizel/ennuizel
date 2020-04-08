@@ -232,7 +232,10 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
                 var buffersinkCtx = buffersinkCtxs[si];
 
                 p = p.then(function() {
-                    return la.ff_decode_multi(c, pkt, frame, spackets, (err === libav.AVERROR_EOF));
+                    return la.ff_decode_multi(c, pkt, frame, spackets, {
+                        ignoreErrors: !!opts.ignoreErrors,
+                        fin: (err === libav.AVERROR_EOF)
+                    });
                 }).then(function(ret) {
                     frames = ret;
                     if (!filterGraph && needFilter[si] && frames.length) {
