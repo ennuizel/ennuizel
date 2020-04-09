@@ -273,6 +273,10 @@ function loadMenu() {
             sub: [],
             last: [
                 {
+                    name: "Noise reduction",
+                    on: noiseRepellentDialog
+                },
+                {
                     name: l("mix"),
                     on: mixSimple
                 },

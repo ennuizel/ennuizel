@@ -30,10 +30,11 @@
 
 // Import a track from a local file (dialog)
 function importTrackDialog() {
+    var input;
     return modalWait().then(function(unlock) {
         modalDialog.innerHTML = "";
 
-        var input = mke(modalDialog, "input");
+        input = mke(modalDialog, "input");
         input.type = "file";
         var cancel = mke(modalDialog, "button", {text: l("cancel")});
 

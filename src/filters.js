@@ -88,8 +88,7 @@ function libAVFilterDialog(filter) {
 }
 
 // Apply the given libav filter with the given parameter values
-function applyLibAVFilter(filter, paramVals)
-{
+function applyLibAVFilter(filter, paramVals) {
     var p = Promise.all([]);
 
     // Apply one-by-one to each selected track
@@ -371,3 +370,267 @@ function mix(opts) {
     });
 }
 ez.mix = mix;
+
+// Dialog for noise-repellent
+function noiseRepellentDialog() {
+    var params = [
+        {
+            name: "AMOUNT",
+            desc: "Amount of noise reduction to apply (dB)",
+            def: 10,
+            min: 0,
+            max: 48
+        },
+        {
+            name: "NOFFSET",
+            desc: "Thresholds offset (dB)",
+            def: 0,
+            min: -12,
+            max: 12
+        },
+        {
+            name: "RELEASE",
+            desc: "Release time (ms)",
+            def: 150,
+            min: 0,
+            max: 1000
+        },
+        {
+            name: "MASKING",
+            desc: "Masking",
+            def: 5,
+            min: 1,
+            max: 10
+        },
+        {
+            name: "T_PROTECT",
+            desc: "Transient protection",
+            def: 1,
+            min: 1,
+            max: 6
+        },
+        {
+            name: "WHITENING",
+            desc: "Residual whitening %",
+            def: 25,
+            min: 0,
+            max: 100
+        }
+    ];
+    var paramEls = [];
+
+    // Build the dialog
+    return modalWait().then(function(unlock) {
+        // First we need to make the options
+        modalDialog.innerHTML = "";
+
+        mke(modalDialog, "div", {text: "Noise repellent adaptive"});
+
+        var form = mke(modalDialog, "div", {"class": "modalform"});
+
+        params.forEach(function(param) {
+            var label = mke(form, "label", {"class": "inputlabel", text: param.desc, "for": "nr_" + param.name});
+            var el = mke(form, "input", {id: "nr_" + param.name});
+            el.name = param.name;
+            el.value = param.def;
+
+            // Limit it
+            el.onchange = function() {
+                var val = +el.value;
+                if (""+val !== el.value) el.value = val;
+                if (val < param.min) el.value = param.min;
+                if (val > param.max) el.value = param.max;
+            };
+
+            paramEls.push(el);
+
+            mke(form, "br");
+        });
+
+        mke(modalDialog, "br");
+        var no = mke(modalDialog, "button", {text: l("cancel")});
+        mke(modalDialog, "span", {text: "  "});
+        var yes = mke(modalDialog, "button", {text: l("filter")});
+
+        modalToggle(true);
+        yes.focus();
+
+        return new Promise(function(res, rej) {
+            yes.onclick = function() {
+                unlock();
+                res(true);
+            };
+            no.onclick = function() {
+                unlock();
+                res(false);
+            };
+        });
+
+    }).then(function(go) {
+        if (go) {
+            modal(l("loadinge")); // Since we might be downloading
+
+            // Get our parameter values
+            var paramVals = {};
+            paramEls.forEach(function(param) {
+                paramVals[param.name] = +param.value;
+            });
+
+            // And apply it
+            return applyNoiseRepellentFilter(paramVals);
+        }
+
+
+    }).then(function() {
+        modal();
+
+    }).catch(warn);
+}
+ez.noiseRepellentDialog = noiseRepellentDialog;
+
+function applyNoiseRepellentFilter(opt) {
+    var p = Promise.all([]);
+
+    // First, load it
+    p = p.then(function() {
+        // Make sure it's loaded
+        if (typeof NoiseRepellent === "undefined") {
+            NoiseRepellent = {"base": "noise-repellent"};
+
+            return new Promise(function(res, rej) {
+                var scr = dce("script");
+                scr.src = "noise-repellent/noise-repellent.js";
+                scr.async = true;
+                scr.onload = res;
+                scr.onerror = rej;
+                document.body.appendChild(scr);
+            });
+        }
+
+    }).then(function() {
+        // Make sure it's ready
+        if (!NoiseRepellent.ready) {
+            return new Promise(function(res) {
+                NoiseRepellent.onready = res;
+            });
+        }
+
+    });
+
+    // Apply one-by-one to each selected track
+    nonemptyTracks(selectedTracks()).forEach(function(trackId) {
+        var track = tracks[trackId];
+        var outTrack, filterGraph, srcCtx, sinkCtx;
+        var frame;
+        var ct = 0;
+        var nrepels = [];
+
+        // To apply a filter, we make a new track, filter into that new track, then delete the old one
+        p = p.then(function() {
+            return createTrack(track.name);
+
+        }).then(function(ret) {
+            outTrack = ret;
+
+            // Create the noise-repellent filter per channel
+            for (var c = 0; c < track.channels; c++)
+                nrepels.push(new NoiseRepellent.NoiseRepellent(track.sampleRate));
+
+            // And apply their options
+            nrepels.forEach(function(nrepel) {
+                nrepel.set(NoiseRepellent.N_ADAPTIVE, 1);
+                for (var o in opt)
+                    nrepel.set(NoiseRepellent[o], opt[o]);
+                nrepel.run([0]); // To get the latency
+            });
+
+            // Create the filter to convert to F32
+            var propsIn = {
+                sample_rate: track.sampleRate,
+                sample_fmt: track.format,
+                channel_layout: track.channelLayout
+            };
+            var propsOut = {
+                sample_rate: track.sampleRate,
+                sample_fmt: libav.AV_SAMPLE_FMT_FLTP,
+                channel_layout: track.channelLayout
+            };
+
+            return Promise.all([
+                libav.ff_init_filter_graph("aresample,apad=pad_len=" + nrepels[0].latency, propsIn, propsOut),
+                libav.av_frame_alloc()
+            ]);
+
+        }).then(function(ret) {
+            filterGraph = ret[0][0];
+            srcCtx = ret[0][1];
+            sinkCtx = ret[0][2];
+            frame = ret[1];
+            var first = 1;
+
+            if (frame === 0)
+                throw new Error("Failed to allocate filtering frame!");
+
+            function filterPart(t, track, i, part, frames) {
+                modal(l("filteringx", track.name) + ": " + Math.round(i/track.parts.length*100) + "%");
+                return libav.ff_filter_multi(srcCtx, sinkCtx, frame, frames, (i === track.parts.length - 1)).then(function(frames) {
+                    // Go through each frame
+                    var p = Promise.all([]);
+                    for (var fi = 0; fi < frames.length; fi++) (function() {
+                        var frame = frames[fi];
+                        p = p.then(function() {
+                            // Perform the real filtering
+                            for (var c = 0; c < track.channels; c++) {
+                                var nrepel = nrepels[c];
+                                frame.data[c] = nrepel.run(frame.data[c]).slice(first*nrepel.latency);
+                            }
+
+                            // And append it to the new track
+                            return trackAppend(outTrack, frame);
+                        });
+                        if (first && fi === 0)
+                            p = p.then(function() { first = 0; });
+                    })();
+                    return p;
+                });
+            }
+
+            return fetchTracks([trackId], {wholeParts: true}, filterPart);
+
+        }).then(function() {
+            modal(l("filteringe"));
+
+            // Delete our nrepel filters
+            nrepels.forEach(function(nrepel) {
+                nrepel.cleanup();
+            });
+
+            // Free our leftovers and delete the old track's content
+            return Promise.all([
+                libav.avfilter_graph_free_js(filterGraph),
+                libav.av_frame_free_js(frame),
+                emptyTrack(track)
+            ]);
+
+        }).then(function() {
+            // Now transfer the new track's content to the old track
+            ["parts", "format", "channelLayout", "channels", "sampleRate", "length"].forEach(function(k) {
+                track[k] = outTrack[k];
+            });
+
+            // Clear out any leftover view
+            if (trackViews[trackId]) {
+                trackViews[trackId].partsContainer.innerHTML = "";
+                trackViews[trackId].parts = [];
+            }
+
+            // And delete the temporary new track (also saves the project properties)
+            outTrack.parts = [];
+            return deleteTrack(outTrack);
+
+        });
+    });
+
+    return p.then(dbCacheFlush).then(updateTrackViews);
+}
+ez.applyNoiseRepellentFilter = applyNoiseRepellentFilter;
