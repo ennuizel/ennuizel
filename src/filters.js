@@ -96,7 +96,6 @@ function applyLibAVFilter(filter, paramVals) {
         var track = tracks[trackId];
         var outTrack, filterGraph, srcCtx, sinkCtx;
         var frame;
-        var ct = 0;
 
         // To apply a filter, we make a new track, filter into that new track, then delete the old one
         p = p.then(function() {
@@ -428,6 +427,7 @@ function noiseRepellentDialog() {
 
         var form = mke(modalDialog, "div", {"class": "modalform"});
 
+        // Add each parameter
         params.forEach(function(param) {
             var label = mke(form, "label", {"class": "inputlabel", text: param.desc, "for": "nr_" + param.name});
             var el = mke(form, "input", {id: "nr_" + param.name});
@@ -446,6 +446,14 @@ function noiseRepellentDialog() {
 
             mke(form, "br");
         });
+
+        // Plus the mode switch
+        var label = mke(form, "label", {"class": "inputlabel", text: "Adaptive?", "for": "nr_adaptive"});
+        var el = mke(form, "input", {id: "nr_adaptive"});
+        el.name = "adaptive";
+        el.type = "checkbox";
+        el.checked = false;
+        paramEls.push(el);
 
         mke(modalDialog, "br");
         var no = mke(modalDialog, "button", {text: l("cancel")});
@@ -473,7 +481,10 @@ function noiseRepellentDialog() {
             // Get our parameter values
             var paramVals = {};
             paramEls.forEach(function(param) {
-                paramVals[param.name] = +param.value;
+                if (param.type === "checkbox")
+                    paramVals[param.name] = param.checked;
+                else
+                    paramVals[param.name] = +param.value;
             });
 
             // And apply it
@@ -488,6 +499,7 @@ function noiseRepellentDialog() {
 }
 ez.noiseRepellentDialog = noiseRepellentDialog;
 
+// Apply the noise-repellent filter based on these options
 function applyNoiseRepellentFilter(opt) {
     var p = Promise.all([]);
 
@@ -517,12 +529,24 @@ function applyNoiseRepellentFilter(opt) {
 
     });
 
+    // Figure out the tracks we care about
+    var targetTracks = nonemptyTracks(selectedTracks());
+
+    // Maybe get noise samples
+    var noiseSamples;
+    if (!opt.adaptive) {
+        p = p.then(function() {
+            return getNoiseSamples(targetTracks);
+        }).then(function(ns) {
+            noiseSamples = ns;
+        });
+    }
+
     // Apply one-by-one to each selected track
-    nonemptyTracks(selectedTracks()).forEach(function(trackId) {
+    targetTracks.forEach(function(trackId) {
         var track = tracks[trackId];
         var outTrack, filterGraph, srcCtx, sinkCtx;
         var frame;
-        var ct = 0;
         var nrepels = [];
 
         // To apply a filter, we make a new track, filter into that new track, then delete the old one
@@ -538,11 +562,28 @@ function applyNoiseRepellentFilter(opt) {
 
             // And apply their options
             nrepels.forEach(function(nrepel) {
-                nrepel.set(NoiseRepellent.N_ADAPTIVE, 1);
-                for (var o in opt)
-                    nrepel.set(NoiseRepellent[o], opt[o]);
-                nrepel.run([0]); // To get the latency
+                for (var o in opt) {
+                    if (o !== "adaptive")
+                        nrepel.set(NoiseRepellent[o], opt[o]);
+                }
+                if (opt.adaptive) {
+                    nrepel.set(NoiseRepellent.N_ADAPTIVE, 1);
+                    nrepel.run([0]); // To get the latency
+                }
             });
+
+            // If we're not adaptive, learn
+            if (!opt.adaptive) {
+                var ns = noiseSamples[trackId];
+                for (var c = 0; c < track.channels; c++) {
+                    var nrepel = nrepels[c];
+                    nrepel.set(NoiseRepellent.N_LEARN, 1);
+                    var nsc = ns[c];
+                    for (var rep = 0; rep < 128; rep++)
+                        nrepel.run(nsc);
+                    nrepel.set(NoiseRepellent.N_LEARN, 0);
+                }
+            }
 
             // Create the filter to convert to F32
             var propsIn = {
@@ -634,3 +675,130 @@ function applyNoiseRepellentFilter(opt) {
     return p.then(dbCacheFlush).then(updateTrackViews);
 }
 ez.applyNoiseRepellentFilter = applyNoiseRepellentFilter;
+
+// Get noise samples for the given tracks
+function getNoiseSamples(targetTracks) {
+    var p = Promise.all([]);
+    var ret = {};
+
+    // Detect one-by-one for each selected track
+    targetTracks.forEach(function(trackId) {
+        var track = tracks[trackId];
+
+        /* The basic idea is to select a one-second sample with the minimum
+         * volume, for each track */
+        var selectedSample = new Array(track.channels);
+        var currentSample = new Array(track.channels);
+        var selectedVolume = new Array(track.channels);
+        var currentVolume = new Array(track.channels);
+
+        for (var c = 0; c < track.channels; c++) {
+            selectedSample[c] = new Float32Array(48000);
+            currentSample[c] = [];
+            selectedVolume[c] = 48000;
+            currentVolume[c] = 0;
+        }
+
+        var filterGraph, srcCtx, sinkCtx;
+        var frame;
+
+        // First convert to F32
+        p = p.then(function() {
+            // Create the filter to convert to F32
+            var propsIn = {
+                sample_rate: track.sampleRate,
+                sample_fmt: track.format,
+                channel_layout: track.channelLayout
+            };
+            var propsOut = {
+                sample_rate: track.sampleRate,
+                sample_fmt: libav.AV_SAMPLE_FMT_FLTP,
+                channel_layout: track.channelLayout
+            };
+
+            return Promise.all([
+                libav.ff_init_filter_graph("aresample", propsIn, propsOut),
+                libav.av_frame_alloc()
+            ]);
+
+        }).then(function(ret) {
+            filterGraph = ret[0][0];
+            srcCtx = ret[0][1];
+            sinkCtx = ret[0][2];
+            frame = ret[1];
+
+            if (frame === 0)
+                throw new Error("Failed to allocate filtering frame!");
+
+            // For each part...
+            function handlePart(t, track, i, part, frames) {
+                modal(l("filteringx", track.name) + ": " + Math.round(i/track.parts.length*100) + "%");
+                return libav.ff_filter_multi(srcCtx, sinkCtx, frame, frames, i === track.parts.length-1).then(function(frames) {
+                    var p = Promise.all([]);
+
+                    // For each frame...
+                    frames.forEach(function(frame) {
+                        p = p.then(function() {
+                            var updated = false;
+
+                            // For each channel...
+                            for (var c = 0; c < track.channels; c++) {
+                                // For each sample...
+                                var data = frame.data[c];
+                                for (var s = 0; s < data.length; s++) {
+                                    var v = data[s];
+                                    var va = Math.abs(v);
+                                    if (va === 0) va = 1;
+
+                                    // Count it
+                                    currentSample[c].push(v);
+                                    currentVolume[c] += va;
+
+                                    // Drop if we're longer than 48k samples
+                                    if (currentSample[c].length > 48000) {
+                                        var da = Math.abs(currentSample[c].shift());
+                                        if (da === 0) da = 1;
+                                        currentVolume[c] -= da;
+                                    }
+
+                                    // Perhaps take this one
+                                    if (currentSample[c].length === 48000 &&
+                                        currentVolume[c] < selectedVolume[c]) {
+                                        updated = true;
+                                        selectedSample[c].set(currentSample[c]);
+                                        selectedVolume[c] = currentVolume[c];
+                                    }
+                                }
+                            }
+
+                            // Avoid stalling the browser
+                            if (updated) {
+                                return new Promise(function(res) {
+                                    setTimeout(res, 0);
+                                });
+                            }
+                        });
+                    });
+                    return p;
+                });
+            }
+
+            return fetchTracks([trackId], {wholeParts: true}, handlePart);
+
+        }).then(function() {
+            modal(l("filteringe"));
+
+            // Keep the currently-selected sample
+            ret[trackId] = selectedSample;
+
+            // Free our leftovers and delete the old track's content
+            return Promise.all([
+                libav.avfilter_graph_free_js(filterGraph),
+                libav.av_frame_free_js(frame)
+            ]);
+
+        });
+    });
+
+    return p.then(function() { return ret; });
+}
