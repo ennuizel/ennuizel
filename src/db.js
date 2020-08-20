@@ -209,24 +209,7 @@ ez.dbCacheFlush = dbCacheFlush;
 
 // Try very hard to set this SOMEWHERE
 function dbSetSomewhere(item, value) {
-    var p;
-    if (navigator.storage && navigator.storage.estimate) {
-        p = navigator.storage.estimate().then(function(estimate) {
-            console.log(estimate);
-            console.log(estimate.usage / estimate.quota);
-            if (estimate.usage / estimate.quota >= 0.9) {
-                // Be conservative, to leave ourselves room for metadata
-                throw new Error();
-            }
-        });
-    } else {
-        p = Promise.all([]);
-    }
-
-    return p.then(function() {
-        return dbCurrent.setItem(item, value);
-
-    }).catch(function(ex) {
+    return dbCurrent.setItem(item, value).catch(function(ex) {
         // Set to Drive instead
         return driveLogIn().then(function() {
             if (dbDrive) {
