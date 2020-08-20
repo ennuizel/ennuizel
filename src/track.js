@@ -932,48 +932,22 @@ function exportProject(name, format) {
             // Now stream it out
             var p = Promise.all([]);
 
-            if (streamSaver.supported) {
-                var fileStream = streamSaver.createWriteStream(trackName, size);
-                var writer = fileStream.getWriter();
+            var fileStream = streamSaver.createWriteStream(trackName, size);
+            var writer = fileStream.getWriter();
 
-                for (var bi = 0; bi <= maxBlock; bi++) {
-                    (function(bi) {
-                        p = p.then(function() {
-                            return dbCacheGet("export-" + bi);
-                        }).then(function(data) {
-                            writer.write(data);
-                        });
-                    })(bi);
-                }
-
-                p = p.then(function() {
-                    writer.close();
-                });
-
-            } else {
-                // Make an appropriately sized output
-                var outbuf = new Uint8Array(size);
-
-                // Retrieve it all
-                for (var bi = 0; bi <= maxBlock; bi++) {
-                    (function(bi) {
-                        var bo = bi * bpp;
-                        p = p.then(function() {
-                            return dbCacheGet("export-" + bi);
-                        }).then(function(data) {
-                            outbuf.set(data, bo);
-                        });
-                    })(bi);
-                }
-
-                // Then save it
-                p = p.then(function() {
-                    var outblob = new Blob([outbuf.buffer]);
-                    saveAs(outblob, trackName);
-                });
+            for (var bi = 0; bi <= maxBlock; bi++) {
+                (function(bi) {
+                    p = p.then(function() {
+                        return dbCacheGet("export-" + bi);
+                    }).then(function(data) {
+                        writer.write(data);
+                    });
+                })(bi);
             }
 
-            return p;
+            return p.then(function() {
+                writer.close();
+            });
 
         }).then(function() {
             // Delete all the tidbits

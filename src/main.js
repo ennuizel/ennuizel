@@ -62,13 +62,13 @@ Promise.all([]).then(function() {
     return Promise.all([
         loadLibrary(libavSrc),
         loadLibrary("localforage.min.js"),
-        loadLibrary("StreamSaver.js"),
-        loadLibrary("FileSaver.min.js")
+        loadLibrary("web-streams-ponyfill.js"),
+        loadLibrary("StreamSaver.js?v=2")
     ]);
 
 }).then(function() {
-    // Stream saver is optional
-    if (typeof streamSaver === "undefined") streamSaver = {supported:false};
+    streamSaver.WritableStream = WebStreamsPolyfill.WritableStream;
+    streamSaver.ReadableStream = WebStreamsPolyfill.ReadableStream;
 
     /* The technique to get persistence (which also implies larger/no quota) is
      * complicated. On Firefox, if you request persitence, it will simply pop
