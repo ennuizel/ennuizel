@@ -932,7 +932,9 @@ function exportProject(name, format) {
             // Now stream it out
             var p = Promise.all([]);
 
-            var fileStream = streamSaver.createWriteStream(trackName, size);
+            var fileStream = streamSaver.createWriteStream(trackName, {
+                size: size
+            });
             var writer = fileStream.getWriter();
 
             for (var bi = 0; bi <= maxBlock; bi++) {

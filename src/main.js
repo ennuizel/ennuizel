@@ -67,8 +67,7 @@ Promise.all([]).then(function() {
     ]);
 
 }).then(function() {
-    streamSaver.WritableStream = WebStreamsPolyfill.WritableStream;
-    streamSaver.ReadableStream = WebStreamsPolyfill.ReadableStream;
+    streamSaver.mitm = "StreamSaver/mitm.html";
 
     /* The technique to get persistence (which also implies larger/no quota) is
      * complicated. On Firefox, if you request persitence, it will simply pop
