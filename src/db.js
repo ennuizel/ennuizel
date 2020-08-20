@@ -209,7 +209,24 @@ ez.dbCacheFlush = dbCacheFlush;
 
 // Try very hard to set this SOMEWHERE
 function dbSetSomewhere(item, value) {
-    return dbCurrent.setItem(item, value).catch(function(ex) {
+    var p;
+    if (navigator.storage && navigator.storage.estimate) {
+        p = navigator.storage.estimate().then(function(estimate) {
+            console.log(estimate);
+            console.log(estimate.usage / estimate.quota);
+            if (estimate.usage / estimate.quota >= 0.9) {
+                // Be conservative, to leave ourselves room for metadata
+                throw new Error();
+            }
+        });
+    } else {
+        p = Promise.all([]);
+    }
+
+    return p.then(function() {
+        return dbCurrent.setItem(item, value);
+
+    }).catch(function(ex) {
         // Set to Drive instead
         return driveLogIn().then(function() {
             if (dbDrive) {
@@ -599,6 +616,7 @@ function driveLogIn() {
             modalToggle(false);
 
     }).catch(function(ex) {
+        console.error(ex);
         if (!modalWasVisible)
             modalToggle(false);
 
@@ -766,6 +784,7 @@ function driveCreateFile(name, content) {
                 try {
                     id = JSON.parse(xhr.responseText);
                 } catch (ex) {
+                    console.error(xhr.responseText);
                     rej(ex);
                 }
                 if (id) {
