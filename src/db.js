@@ -774,38 +774,52 @@ function driveCreateFile(name, content) {
 
     // First check for an existing file
     return driveDeleteFile(name).then(function() {
-        // Create the new file manually
-        return new Promise(function(res, rej) {
-            var xhr = new XMLHttpRequest();
+        return driveTryUpload(name, mime, file, 3);
+    });
+}
 
-            xhr.onreadystatechange = function() {
-                if (xhr.readyState !== 4) return;
-                var id;
-                try {
-                    id = JSON.parse(xhr.responseText);
-                } catch (ex) {
-                    console.error(xhr.responseText);
-                    rej(ex);
-                }
-                if (id) {
-                    dbDriveCache[name] = id.id;
-                    res(id.id);
-                }
+// Try to upload a file to Drive [times] times
+function driveTryUpload(name, mime, file, times) {
+    // We use the manual method because the API doesn't suffice
+    return new Promise(function(res, rej) {
+        var xhr = new XMLHttpRequest();
+
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState !== 4) return;
+
+            if (xhr.status !== 200) {
+                // Unusual response, maybe try again
+                if (times > 1)
+                    res(driveTryUpload(name, mime, file, times - 1));
+                else
+                    rej(new Error(xhr.responseText));
+                return;
             }
 
-            xhr.open("POST", "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id");
-            xhr.setRequestHeader("Authorization", "Bearer " + gapi.auth.getToken().access_token);
+            // Should just be the result
+            var id;
+            try {
+                id = JSON.parse(xhr.responseText);
+            } catch (ex) {
+                rej(ex);
+            }
+            if (id) {
+                dbDriveCache[name] = id.id;
+                res(id.id);
+            }
+        }
 
-            var metadata = {name: name, mimeType: mime, parents: [dbDrive]};
-            metadata = new Blob([JSON.stringify(metadata)], {type: "application/json"});
+        xhr.open("POST", "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id");
+        xhr.setRequestHeader("Authorization", "Bearer " + gapi.auth.getToken().access_token);
 
-            var form = new FormData();
-            form.append("metadata", metadata);
-            form.append("file", file);
+        var metadata = {name: name, parents: [dbDrive]};
+        metadata = new Blob([JSON.stringify(metadata)], {type: "application/json"});
 
-            xhr.send(form);
-        });
+        var form = new FormData();
+        form.append("metadata", metadata);
+        form.append("file", file);
 
+        xhr.send(form);
     });
 }
 
