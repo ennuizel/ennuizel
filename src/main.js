@@ -62,9 +62,10 @@ Promise.all([]).then(function() {
     return Promise.all([
         loadLibrary(libavSrc),
         loadLibrary("localforage.min.js"),
-        loadLibrary("web-streams-ponyfill.js"),
-        loadLibrary("StreamSaver.js?v=2")
-    ]);
+        loadLibrary("web-streams-ponyfill.js")
+    ]).then(function() {
+        return loadLibrary("StreamSaver.js?v=2")
+    });
 
 }).then(function() {
     streamSaver.mitm = "StreamSaver/mitm.html";
