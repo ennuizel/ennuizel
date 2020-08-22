@@ -64,7 +64,7 @@ Promise.all([]).then(function() {
         loadLibrary("localforage.min.js"),
         loadLibrary("web-streams-ponyfill.js")
     ]).then(function() {
-        return loadLibrary("StreamSaver.js?v=2")
+        return loadLibrary("StreamSaver.js?v=3")
     });
 
 }).then(function() {
