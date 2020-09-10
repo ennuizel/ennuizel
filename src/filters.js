@@ -508,23 +508,7 @@ function applyNoiseRepellentFilter(opt) {
         // Make sure it's loaded
         if (typeof NoiseRepellent === "undefined") {
             NoiseRepellent = {"base": "noise-repellent"};
-
-            return new Promise(function(res, rej) {
-                var scr = dce("script");
-                scr.src = "noise-repellent/noise-repellent.js";
-                scr.async = true;
-                scr.onload = res;
-                scr.onerror = rej;
-                document.body.appendChild(scr);
-            });
-        }
-
-    }).then(function() {
-        // Make sure it's ready
-        if (!NoiseRepellent.ready) {
-            return new Promise(function(res) {
-                NoiseRepellent.onready = res;
-            });
+            return loadLibrary("noise-repellent/noise-repellent-m.js");
         }
 
     });
@@ -558,7 +542,12 @@ function applyNoiseRepellentFilter(opt) {
 
             // Create the noise-repellent filter per channel
             for (var c = 0; c < track.channels; c++)
-                nrepels.push(new NoiseRepellent.NoiseRepellent(track.sampleRate));
+                nrepels.push(NoiseRepellent.NoiseRepellent(track.sampleRate));
+
+            return Promise.all(nrepels);
+
+        }).then(function(ret) {
+            nrepels = ret;
 
             // And apply their options
             nrepels.forEach(function(nrepel) {
