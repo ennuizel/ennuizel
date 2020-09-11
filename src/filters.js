@@ -89,7 +89,10 @@ function libAVFilterDialog(filter) {
 
 // Apply the given libav filter with the given parameter values
 function applyLibAVFilter(filter, paramVals) {
-    var p = Promise.all([]);
+    var libav;
+    var p = LibAV.LibAV().then(function(ret) {
+        libav = ret;
+    });
 
     // Apply one-by-one to each selected track
     nonemptyTracks(selectedTracks()).forEach(function(trackId) {
@@ -145,7 +148,7 @@ function applyLibAVFilter(filter, paramVals) {
                     var p = Promise.all([]);
                     frames.forEach(function(frame) {
                         p = p.then(function() {
-                            return trackAppend(outTrack, frame);
+                            return trackAppend(outTrack, frame, libav);
                         });
                     });
                     return p;
@@ -212,6 +215,7 @@ function mixLevelKeep() {
 
 // The actual mixer
 function mix(opts) {
+    var libav;
     opts = opts || {};
     opts.fin = opts.fin || "anull";
     var outTrack;
@@ -231,7 +235,11 @@ function mix(opts) {
     modal(l("mixing") + "...");
 
     // We create a new track, filter into it, then delete all the old tracks
-    return createTrack("Mix").then(function(ret) {
+    return LibAV.LibAV().then(function(ret) {
+        libav = ret;
+        return createTrack("Mix");
+
+    }).then(function(ret) {
         outTrack = ret;
 
         // Create the mix descriptor
@@ -327,7 +335,7 @@ function mix(opts) {
                 var p = Promise.all([]);
                 frames.forEach(function(frame) {
                     p = p.then(function() {
-                        return trackAppend(outTrack, frame);
+                        return trackAppend(outTrack, frame, libav);
                     });
                 });
                 return p.then(reset);
@@ -501,7 +509,10 @@ ez.noiseRepellentDialog = noiseRepellentDialog;
 
 // Apply the noise-repellent filter based on these options
 function applyNoiseRepellentFilter(opt) {
-    var p = Promise.all([]);
+    var libav;
+    var p = LibAV.LibAV().then(function(ret) {
+        libav = ret;
+    });
 
     // First, load it
     p = p.then(function() {
@@ -667,7 +678,10 @@ ez.applyNoiseRepellentFilter = applyNoiseRepellentFilter;
 
 // Get noise samples for the given tracks
 function getNoiseSamples(targetTracks) {
-    var p = Promise.all([]);
+    var libav;
+    var p = LibAV.LibAV().then(function(ret) {
+        libav = ret;
+    });
     var ret = {};
 
     // Detect one-by-one for each selected track

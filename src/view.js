@@ -580,6 +580,7 @@ function updateTrackView(track) {
     var outer = trackView.container;
     var container = trackView.partsContainer;
     var outPart;
+    var libav;
 
     var start = Math.max(
         Math.min(track.parts.length, trackView.parts.length), 0);
@@ -727,7 +728,10 @@ function updateTrackView(track) {
     if (ez.skipRendering) {
         return dbCacheFlush();
     } else {
-        return fetchTracks([track.id], {start: start, skip: skip, wholeParts: true}, drawPart).then(dbCacheFlush);
+        return LibAV.LibAV().then(function(ret) {
+            libav = ret;
+            return fetchTracks([track.id], {start: start, skip: skip, wholeParts: true}, drawPart);
+        }).then(dbCacheFlush);
     }
 }
 

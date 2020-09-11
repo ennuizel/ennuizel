@@ -14,10 +14,7 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-// Local instance of libav.js
-var libav;
-
-// And its source
+// libav's source
 var libavSrc = "libav/libav-2.1.4.3.1-fat.js";
 
 // The maximum size to read from a file in one gulp
@@ -112,15 +109,11 @@ Promise.all([]).then(function() {
     if (!persistence)
         return warn(l("persistenceno"));
 
-}).then(function() {
-    return LibAV.LibAV();
-
 }).then(function(ret) {
-    ez.libav = libav = ret;
-
     // We can only define our export formats once we have libav loaded
-    setExportFormats();
+    return setExportFormats();
 
+}).then(function() {
     // Load any plugins
     var p = Promise.resolve(true);
     if (ez.plugins) {

@@ -86,11 +86,16 @@ function importTrackDialog() {
 function importTrackData(name, ab) {
     var fmt_ctx, streams, aidxs, durations, cs = [], pkts = [], frames = [];
     var buf = new Uint8Array(ab);
+    var libav;
 
     // Create a temporary import name for it
     var imName = "input-" + randomId() + ".dat";
 
-    return libav.writeFile(imName, buf).then(function() {
+    return LibAV.LibAV().then(function(ret) {
+        libav = ret;
+        return libav.writeFile(imName, buf);
+
+    }).then(function() {
         return libav.ff_init_demuxer_file(imName);
 
     }).then(function(ret) {
@@ -183,13 +188,23 @@ function timestamp(time) {
  * tracks will not be rendered, since that isn't threadable (for the moment). */
 function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frameptrs, opts) {
     opts = opts || {};
-    var la = opts.libav || libav;
+    var la;
     var report = opts.report || modal;
     var tracks = [];
     var needFilter = [];
     var filterGraphs = {}, buffersrcCtxs = {}, buffersinkCtxs = {};
     var ptss = [];
     var multitrack = (stream_idxs.length > 1);
+
+    // Get a libav if we need it
+    var p = Promise.all([]).then(function() {
+        if (opts.libav)
+            return opts.libav;
+        else
+            return LibAV.LibAV();
+    }).then(function(ret) {
+        la = ret;
+    });
 
     // Start by making all the tracks
     stream_idxs.forEach(function(idx) {
@@ -199,16 +214,18 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
         ptss.push(0);
     });
 
-    return Promise.all(tracks).then(function(ret) {
+    return p.then(function() {
+        return Promise.all(tracks);
+    }).then(function(ret) {
         tracks = ret;
 
         function handlePackets(ret) {
             var err = ret[0];
             var packets = ret[1];
-            if (err !== -libav.EAGAIN && err !== libav.AVERROR_EOF)
+            if (err !== -la.EAGAIN && err !== la.AVERROR_EOF)
                 throw new Error("Error reading: " + err);
 
-            if (err === -libav.EAGAIN && Object.keys(packets).length === 0 && opts.againCb) {
+            if (err === -la.EAGAIN && Object.keys(packets).length === 0 && opts.againCb) {
                 // Nothing to read, request more
                 return opts.againCb().then(function() {
                     return la.ff_read_multi(fmt_ctx, pkts[0], opts.devfile, maxReadSize);
@@ -235,7 +252,7 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
                 p = p.then(function() {
                     return la.ff_decode_multi(c, pkt, frame, spackets, {
                         ignoreErrors: !!opts.ignoreErrors,
-                        fin: (err === libav.AVERROR_EOF)
+                        fin: (err === la.AVERROR_EOF)
                     });
                 }).then(function(ret) {
                     frames = ret;
@@ -243,31 +260,31 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
                         // Find the needed filter for a format supported by wavpack
                         var target = frames[0].format;
                         switch (target) {
-                            case libav.AV_SAMPLE_FMT_U8:
-                                target = libav.AV_SAMPLE_FMT_U8P;
+                            case la.AV_SAMPLE_FMT_U8:
+                                target = la.AV_SAMPLE_FMT_U8P;
                                 break;
 
-                            case libav.AV_SAMPLE_FMT_S16:
-                                target = libav.AV_SAMPLE_FMT_S16P;
+                            case la.AV_SAMPLE_FMT_S16:
+                                target = la.AV_SAMPLE_FMT_S16P;
                                 break;
 
-                            case libav.AV_SAMPLE_FMT_S32:
-                                target = libav.AV_SAMPLE_FMT_S32P;
+                            case la.AV_SAMPLE_FMT_S32:
+                                target = la.AV_SAMPLE_FMT_S32P;
                                 break;
 
-                            case libav.AV_SAMPLE_FMT_FLT:
-                                target = libav.AV_SAMPLE_FMT_FLTP;
+                            case la.AV_SAMPLE_FMT_FLT:
+                                target = la.AV_SAMPLE_FMT_FLTP;
                                 break;
 
-                            case libav.AV_SAMPLE_FMT_U8P:
-                            case libav.AV_SAMPLE_FMT_S16P:
-                            case libav.AV_SAMPLE_FMT_S32P:
-                            case libav.AV_SAMPLE_FMT_FLTP:
+                            case la.AV_SAMPLE_FMT_U8P:
+                            case la.AV_SAMPLE_FMT_S16P:
+                            case la.AV_SAMPLE_FMT_S32P:
+                            case la.AV_SAMPLE_FMT_FLTP:
                                 needFilter[si] = ("filter" in opts);
                                 break;
 
                             default:
-                                target = libav.AV_SAMPLE_FMT_S32P;
+                                target = la.AV_SAMPLE_FMT_S32P;
                                 break;
                         }
 
@@ -300,7 +317,7 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
                         });
 
                     } else return null;
-                    
+
                 }).then(function(ret) {
                     if (ret) {
                         // We initialized a filter graph
@@ -311,7 +328,7 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
 
                     // Possibly transform it
                     if (filterGraph)
-                        return la.ff_filter_multi(buffersrcCtx, buffersinkCtx, frame, frames, (err === libav.AVERROR_EOF));
+                        return la.ff_filter_multi(buffersrcCtx, buffersinkCtx, frame, frames, (err === la.AVERROR_EOF));
                     return null;
 
                 }).then(function(ret) {
@@ -343,7 +360,7 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
             })(si);
 
             // Either we're done, or we need to loop again
-            if (err === -libav.EAGAIN) {
+            if (err === -la.EAGAIN) {
                 p = p.then(function() {
                     return la.ff_read_multi(fmt_ctx, pkts[0], opts.devfile, maxReadSize).then(handlePackets);
                 });
@@ -406,20 +423,27 @@ ez.createTrack = createTrack;
 
 // Append a frame to a track (does not flush)
 function trackAppend(track, frame, la) {
-    la = la || libav;
     var parts = track.parts;
     var part, data;
+    var p;
+
+    // Make libav
+    p = Promise.all([]).then(function() {
+        if (la)
+            return la;
+        else
+            return LibAV.LibAV();
+    }).then(function(ret) {
+        la = ret;
+    });
 
     // First make sure the track itself is initialized
-    var p;
     if (track.format < 0) {
         track.format = frame.format;
         track.channelLayout = frame.channel_layout;
         track.channels = frame.channels;
         track.sampleRate = frame.sample_rate;
-        p = projectPropertiesUpdate();
-    } else {
-        p = Promise.all([]);
+        p = p.then(projectPropertiesUpdate);
     }
 
     // Append its duration
@@ -535,6 +559,7 @@ function trackAppend(track, frame, la) {
  * true or false for whether to skip this part. */
 function fetchTracks(trackList, opts, cb) {
     if (!opts) opts = {};
+    var libav;
     var track, part;
 
     // Maximum part number
@@ -662,8 +687,10 @@ function fetchTracks(trackList, opts, cb) {
         });
     }
 
-    return fetchPart();
-
+    return LibAV.LibAV().then(function(ret) {
+        libav = ret;
+        return fetchPart();
+    });
 }
 ez.fetchTracks = fetchTracks;
 
@@ -712,15 +739,17 @@ ez.deleteTrack = deleteTrack;
 // The formats we can export to
 var exportFormats;
 function setExportFormats() {
-    exportFormats =
-    [{format: "flac", codec: "flac", sample_fmt: libav.AV_SAMPLE_FMT_S32, name: "FLAC"},
-     {format: "ipod", ext: "m4a", codec: "aac", sample_fmt: libav.AV_SAMPLE_FMT_FLTP, name: "M4A (MPEG-4 audio)"},
-     {format: "ogg", codec: "libvorbis", sample_fmt: libav.AV_SAMPLE_FMT_FLTP, name: "Ogg Vorbis"},
-     {format: "ogg", ext: "opus", codec: "libopus", sample_fmt: libav.AV_SAMPLE_FMT_FLT, sample_rate: 48000, name: "Opus"},
-     {format: "ipod", ext: "m4a", codec: "alac", sample_fmt: libav.AV_SAMPLE_FMT_S32P, name: "ALAC (Apple Lossless)"},
-     {format: "wv", codec: "wavpack", sample_fmt: libav.AV_SAMPLE_FMT_FLTP, name: "wavpack"},
-     {format: "wav", codec: "pcm_s16le", sample_fmt: libav.AV_SAMPLE_FMT_S16, name: "wav"}];
-    ez.exportFormats = exportFormats;
+    return LibAV.LibAV().then(function(libav) {
+        exportFormats =
+        [{format: "flac", codec: "flac", sample_fmt: libav.AV_SAMPLE_FMT_S32, name: "FLAC"},
+         {format: "ipod", ext: "m4a", codec: "aac", sample_fmt: libav.AV_SAMPLE_FMT_FLTP, name: "M4A (MPEG-4 audio)"},
+         {format: "ogg", codec: "libvorbis", sample_fmt: libav.AV_SAMPLE_FMT_FLTP, name: "Ogg Vorbis"},
+         {format: "ogg", ext: "opus", codec: "libopus", sample_fmt: libav.AV_SAMPLE_FMT_FLT, sample_rate: 48000, name: "Opus"},
+         {format: "ipod", ext: "m4a", codec: "alac", sample_fmt: libav.AV_SAMPLE_FMT_S32P, name: "ALAC (Apple Lossless)"},
+         {format: "wv", codec: "wavpack", sample_fmt: libav.AV_SAMPLE_FMT_FLTP, name: "wavpack"},
+         {format: "wav", codec: "pcm_s16le", sample_fmt: libav.AV_SAMPLE_FMT_S16, name: "wav"}];
+        ez.exportFormats = exportFormats;
+    });
 }
 
 // Since we export the project just by exporting each track, this actually belongs here
@@ -777,6 +806,11 @@ function exportProjectDialog() {
 function exportProject(name, format) {
     var trackList = nonemptyTracks(selectedTracks());
     var ext = format.ext?format.ext:format.format;
+    var libavOpts = {};
+
+    // ALAC + WebAssembly = bugs!
+    if (format.codec === "alac")
+        libavOpts.nowasm = true;
 
     function exportTrack(track) {
         // Figure out the name
@@ -784,17 +818,6 @@ function exportProject(name, format) {
         if (trackList.length > 1)
             trackName += "-" + track.name.replace(/[^a-zA-Z0-9]/g, "_");
         trackName += "." + ext;
-
-        // Set up the device to mux
-        var bpp = 8*1024*1024;
-        var maxBlock = -1;
-        var size = -1;
-        var writep = Promise.all([]);
-        libav.onwrite = function(name, pos, buf) {
-            var sz = pos + buf.length;
-            if (sz > size) size = sz;
-            writep = dowrite(writep, name, pos, buf);
-        }
 
         function dowrite(p, name, pos, buf) {
             // Figure out which block to write this to
@@ -828,17 +851,33 @@ function exportProject(name, format) {
             });
         }
 
-        // Start the actual muxing
+        var libav;
         var c, frame, fframe, pkt, frameSize, oc, pb;
         var filterGraph, srcCtx, sinkCtx;
         var sampleRate = format.sample_rate ? format.sample_rate : track.sampleRate;
-        return libav.ff_init_encoder(format.codec, {
-            sample_fmt: format.sample_fmt,
-            sample_rate: sampleRate,
-            channel_layout: track.channelLayout,
-            channels: track.channels
-        }, 1, sampleRate).then(function(ret) {
 
+        // Set up the device to mux
+        var bpp = 8*1024*1024;
+        var maxBlock = -1;
+        var size = -1;
+        var writep = Promise.all([]);
+        return LibAV.LibAV(libavOpts).then(function(ret) {
+            libav = ret;
+            libav.onwrite = function(name, pos, buf) {
+                var sz = pos + buf.length;
+                if (sz > size) size = sz;
+                writep = dowrite(writep, name, pos, buf);
+            }
+
+            // Start the actual muxing
+            return libav.ff_init_encoder(format.codec, {
+                sample_fmt: format.sample_fmt,
+                sample_rate: sampleRate,
+                channel_layout: track.channelLayout,
+                channels: track.channels
+            }, 1, sampleRate);
+
+        }).then(function(ret) {
             c = ret[1];
             frame = ret[2];
             pkt = ret[3];
@@ -991,24 +1030,6 @@ function exportProject(name, format) {
     }
 
     var p = Promise.all([]);
-
-    /* ALAC + WebAssembly = bugs! Our insane solution is to *reload* libav with
-     * plain asm.js if it's requested */
-    if (format.codec === "alac" && !libav.nowasm) {
-        LibAV = {base: "libav", nowasm: true};
-        p = p.then(function() {
-            return loadLibrary(libavSrc);
-        }).then(function() {
-            return new Promise(function(res, rej) {
-                if (LibAV.ready)
-                    res();
-                else
-                    LibAV.onready = res;
-            });
-        }).then(function() {
-            libav = LibAV;
-        });
-    }
 
     trackList.forEach(function(trackId) {
         var track = tracks[trackId];
