@@ -621,13 +621,22 @@ function applyNoiseRepellentFilter(opt) {
                         var frame = frames[fi];
                         p = p.then(function() {
                             // Perform the real filtering
+                            var truncated = false;
                             for (var c = 0; c < track.channels; c++) {
                                 var nrepel = nrepels[c];
                                 frame.data[c] = nrepel.run(frame.data[c]).slice(first*nrepel.latency);
+                                if (frame.data[c].length === 0) {
+                                    truncated = true;
+                                    break;
+                                }
                             }
 
                             // And append it to the new track
-                            return trackAppend(outTrack, frame);
+                            if (!truncated)
+                                return trackAppend(outTrack, frame, libav);
+                            else
+                                return Promise.all([]);
+
                         });
                         if (first && fi === 0)
                             p = p.then(function() { first = 0; });
