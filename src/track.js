@@ -137,7 +137,7 @@ function importTrackData(name, ab) {
 
     }).then(function() {
         // Now import it all
-        return importTrackLibAV(name, fmt_ctx, aidxs, durations, cs, pkts, frames);
+        return importTrackLibAV(name, fmt_ctx, aidxs, durations, cs, pkts, frames, {libav: libav});
 
     }).then(function() {
         return cleanup();
@@ -159,7 +159,7 @@ function importTrackData(name, ab) {
                 return libav.avformat_close_input_js(fmt_ctx);
         }).then(function() {
             return libav.unlink(imName);
-        });
+        }).then(updateTrackViews);
     }
 }
 ez.importTrackData = importTrackData;
