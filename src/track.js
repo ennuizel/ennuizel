@@ -426,6 +426,7 @@ function trackAppend(track, frame, la) {
     var parts = track.parts;
     var part, data;
     var p;
+    var unlock;
 
     // Make libav
     p = Promise.all([]).then(function() {
@@ -450,6 +451,12 @@ function trackAppend(track, frame, la) {
     track.length += frame.nb_samples;
 
     return p.then(function() {
+        // Lock the DB
+        return dbWait();
+
+    }).then(function(unl) {
+        unlock = unl;
+
         // Check if we need to add a new part
         var newPart = false;
         var start = 0;
@@ -466,10 +473,10 @@ function trackAppend(track, frame, la) {
         // Create the new part if needed
         if (newPart) {
             function checkId(id) {
-                return dbCacheGet("data-" + id).then(function(ret) {
+                return dbCacheGetUnlocked("data-" + id).then(function(ret) {
                     if (ret === null) {
                         // Good, we'll take this!
-                        return dbCacheSet("data-" + id, []).then(function() {
+                        return dbCacheSetUnlocked("data-" + id, []).then(function() {
                             parts.push({raw: true, id: id, start: start, length: 0});
                         });
                     }
@@ -487,7 +494,7 @@ function trackAppend(track, frame, la) {
     }).then(function() {
         // The last part is appendable
         part = parts[parts.length-1];
-        return dbCacheGet("data-" + part.id);
+        return dbCacheGetUnlocked("data-" + part.id);
 
     }).then(function(ret) {
         data = ret;
@@ -543,12 +550,19 @@ function trackAppend(track, frame, la) {
 
     }).then(function() {
         // data and part are both ready
-        return dbCacheSet("data-" + part.id, data);
+        return dbCacheSetUnlocked("data-" + part.id, data);
 
     }).then(function() {
+        unlock();
+        unlock = null;
         return projectPropertiesUpdate();
 
-    }).catch(warn);
+    }).catch(function(ex) {
+        if (unlock)
+            unlock();
+        warn(ex);
+
+    });
 }
 
 /* Fetch the content of a list of tracks (by ID), with options for how to fetch

@@ -141,29 +141,33 @@ function dbCacheGet(item) {
 }
 ez.dbCacheGet = dbCacheGet;
 
+// Set an item via the cache, unlocked
+function dbCacheSetUnlocked(item, value) {
+    // If it's in the cache, just update it
+    if (item in dbCache.cache) {
+        var idx = dbCache.ids.indexOf(item);
+        if (idx >= 0)
+            dbCache.ids.splice(idx, 1);
+        dbCache.ids.push(item);
+        dbCache.cache[item] = value;
+        dbCache.changed[item] = true;
+        return Promise.all([]);
+    }
+
+    // Get it to bring it into the cache first
+    return dbCacheGetUnlocked(item).then(function() {
+        dbCache.cache[item] = value;
+        dbCache.changed[item] = true;
+    });
+}
+ez.dbCacheSetUnlocked = dbCacheSetUnlocked;
+
 // Set an item via the cache
 function dbCacheSet(item, value) {
     var unlock;
     return dbWait().then(function(unl) {
         unlock = unl;
-
-        // If it's in the cache, just update it
-        if (item in dbCache.cache) {
-            var idx = dbCache.ids.indexOf(item);
-            if (idx >= 0)
-                dbCache.ids.splice(idx, 1);
-            dbCache.ids.push(item);
-            dbCache.cache[item] = value;
-            dbCache.changed[item] = true;
-            return;
-        }
-
-        // Get it to bring it into the cache first
-        return dbCacheGetUnlocked(item).then(function() {
-            dbCache.cache[item] = value;
-            dbCache.changed[item] = true;
-            return;
-        });
+        return dbCacheSetUnlocked(item, value);
 
     }).catch(function(ex) {
         unlock();
