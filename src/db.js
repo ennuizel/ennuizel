@@ -70,11 +70,10 @@ function dbWait() {
 function dbCacheGetUnlocked(item) {
     return Promise.all([]).then(function() {
         if (item in dbCache.cache) {
-            // Put it at the end of the LRU list
+            // We'll put it at the end of the LRU list
             var idx = dbCache.ids.indexOf(item);
             if (idx >= 0)
                 dbCache.ids.splice(idx, 1);
-            dbCache.ids.push(item);
 
             // Then return the cached value
             return dbCache.cache[item];
@@ -115,8 +114,10 @@ function dbCacheGetUnlocked(item) {
 
     }).then(function(val) {
         dbCache.ids.push(item);
-        dbCache.cache[item] = val;
-        dbCache.changed[item] = false;
+        if (!(item in dbCache.cache)) {
+            dbCache.cache[item] = val;
+            dbCache.changed[item] = false;
+        }
         return val;
 
     });
