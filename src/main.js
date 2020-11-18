@@ -15,7 +15,7 @@
  */
 
 // libav's source
-var libavSrc = "libav/libav-2.1.4.3.1-fat.js";
+var libavSrc = "libav/libav-2.2.4.3.1-fat.js";
 
 // The maximum size to read from a file in one gulp
 var maxReadSize = 8*1024*1024;

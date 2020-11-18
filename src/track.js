@@ -218,6 +218,8 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
         return Promise.all(tracks);
     }).then(function(ret) {
         tracks = ret;
+        var inTime = new Date().getTime();
+        var inTS = 0;
 
         function handlePackets(ret) {
             var err = ret[0];
@@ -348,10 +350,18 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
 
                     // Display status
                     p = p.then(function() {
+                        var outTime = new Date().getTime();
+                        var outTS = ptss[0];
+                        var speedup = ((outTS - inTS) / track.sampleRate * 1000) / (outTime - inTime);
+                        speedup = " (" + speedup.toPrecision(2) + "x)";
+
                         if (duration)
-                            report(l("loadingx", name) + ": " + Math.round(ptss[si] / duration * 100) + "%");
+                            report(l("loadingx", name) + ": " + Math.round(ptss[si] / duration * 100) + "%" + speedup);
                         else
-                            report(l("loadingx", name) + ": " + timestamp(ptss[si] / track.sampleRate));
+                            report(l("loadingx", name) + ": " + timestamp(ptss[si] / track.sampleRate) + speedup);
+
+                        inTime = outTime;
+                        inTS = outTS;
                     });
 
                     return p;

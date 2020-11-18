@@ -1,7 +1,7 @@
 MINIFIER=closure-compiler --language_in=ECMASCRIPT5
 #MINIFIER=cat
 
-DEPS=libav/libav-1.5.4.2.2-fat.js \
+DEPS=libav/libav-2.2.4.3.1-fat.js \
 	noise-repellent/noise-repellent.js \
 	web-streams-ponyfill.js \
 	localforage.min.js
