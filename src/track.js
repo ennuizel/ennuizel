@@ -329,8 +329,50 @@ function importTrackLibAV(name, fmt_ctx, stream_idxs, durations, cs, pkts, frame
                     }
 
                     // Possibly transform it
-                    if (filterGraph)
-                        return la.ff_filter_multi(buffersrcCtx, buffersinkCtx, frame, frames, (err === la.AVERROR_EOF));
+                    if (filterGraph) {
+                        // Splitting it up to avoid too much passing thru postMessage at once
+                        var p = Promise.resolve([]);
+                        var sz = 0;
+                        var from = 0, to;
+                        for (to = 0; to < frames.length; to++) {
+                            var frameTo = frames[to];
+                            var fsz;
+                            if (frameTo.format >= la.AV_SAMPLE_FMT_U8P) {
+                                // planar
+                                fsz = 8 * frameTo.data.length * frameTo.data[0].length;
+                            } else {
+                                fsz = 8 * frameTo.data.length;
+                            }
+                            sz += fsz;
+                            if (sz >= maxReadSize) {
+                                (function(from, to) {
+                                    p = p.then(function(pre) {
+                                        return la.ff_filter_multi(buffersrcCtx, buffersinkCtx, frame, frames.slice(from, to), false).then(function(post) {
+                                            return pre.concat(post);
+                                        });
+                                    });
+                                })(from, to);
+                                from = to;
+                                sz = fsz;
+                            }
+                        }
+
+                        if (from === 0) {
+                            p = la.ff_filter_multi(buffersrcCtx, buffersinkCtx, frame, frames, (err === la.AVERROR_EOF));
+
+                        } else {
+                            p = p.then(function(pre) {
+                                return la.ff_filter_multi(buffersrcCtx, buffersinkCtx, frame, frames.slice(from), (err === la.AVERROR_EOF)).then(function(post) {
+                                    console.log("Last concat " + pre.length + " + " + post.length);
+                                    return pre.concat(post);
+                                });
+                            });
+
+                        }
+
+                        return p;
+                    }
+
                     return null;
 
                 }).then(function(ret) {
