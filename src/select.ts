@@ -239,12 +239,12 @@ let animationFrame: number = null;
  * Update the selection display.
  */
 async function updateDisplay() {
-    await selPromise;
-
     if (animationFrame !== null) {
         // Somebody else is handling this already
         return;
     }
+
+    await selPromise;
 
     // Wait for an animation frame
     await new Promise(res => {
