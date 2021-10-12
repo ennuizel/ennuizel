@@ -32,7 +32,7 @@ export class Store {
     }
 
     dropInstance(opts: {name: string}) {
-        return this.dropInstance(opts);
+        return this.localForage.dropInstance(opts);
     }
 
     async getItem(name: string): Promise<any> {
