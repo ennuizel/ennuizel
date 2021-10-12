@@ -1,0 +1,50 @@
+<!doctype html>
+<!--
+ * Copyright (c) 2021 Yahweasel
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+ * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+ * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+ * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+-->
+<html>
+    <head>
+        <title>Ennuizel</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link href="../fa/css/all.min.css" rel="stylesheet" />
+        <link href="../ennuizel.css" rel="stylesheet" />
+    </head>
+    <body>
+        <!-- Our overall interface is a menu at the top, then track space
+             below, with each track shown as a menu on the left, then a canvas
+             for the waveform. Overlain over the main canvas is a second canvas
+             for the playhead and/or selection. Panels come after the main
+             area.
+        -->
+<!--START-->
+        <div class="main cflex">
+            <div class="menu">
+                <button id="b-project">Project</button>
+                <button id="b-tracks">Tracks</button>
+                <button id="b-filters">Filters</button>
+                <div class="stretch"></div>
+                <div id="storage-indicator"></div>
+            </div>
+            <div id="project"></div>
+            <div class="status-bar" id="status">
+                &nbsp;
+            </div>
+        </div>
+<!--END-->
+        <script>(function() {
+        })();</script>
+    </body>
+</html>

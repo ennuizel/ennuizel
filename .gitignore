@@ -1,0 +1,9 @@
+awp/ennuizel-player.js
+ennuizel.js
+libav/*.js
+libav/*.wasm
+localforage.min.js
+node_modules
+package-lock.json
+
+.*.swp

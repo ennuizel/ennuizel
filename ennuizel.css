@@ -1,110 +1,280 @@
+/* General */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans&display=swap');
+
+:root {
+    --bg: #122;
+    --bg-hover: #244;
+    --bg-active: #355;
+    --bg-off: #333;
+    --bg-plain: #111;
+    --bg-invite: #244;
+    --bg-status: #ccc;
+    --bg-wave: #103030;
+    --fg: #cff;
+    --fg-status: #333;
+    --border-plain: #222;
+    --link-color: #fcc;
+    --link-color-status: #00a;
+
+    --wave-too-soft: #333;
+    --wave-too-loud: #700;
+    --user-list-silent: #000;
+    --user-list-speaking: #2b552b;
+    --video-speaking-sel: #090;
+    --video-speaking: #5e8f52;
+    --video-silent-sel: #999;
+    --video-silent: #000;
+
+    --nopeak-1: #200;
+    --peak-1:   #800;
+    --nopeak-2: #220;
+    --peak-2:   #880;
+    --nopeak-3: #020;
+    --peak-3:   #080;
+}
+
 body {
-    background: #033;
-    color: #fff;
-    margin: 0px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Noto Sans', sans-serif;
+    font-size: 1rem;
 }
 
 a {
-    color: #6ff;
+    color: var(--link-color);
 }
 
-.menu {
+.cflex {
+    display: flex;
+    flex-direction: column;
+}
+
+.rflex {
+    display: flex;
+    align-items: center;
+    overflow: auto hidden;
+}
+
+.bigrflex {
+    display: flex;
+    align-items: start;
+    gap: 0.25em;
+}
+
+.panel {
+    display: none;
     position: fixed;
-    left: 0;
-    top: 0;
-    width: 100%;
-    background: #366;
-    padding: 0.5em;
-    border-bottom: 2px solid #fff;
-}
-
-.menuline {
-    padding-bottom: 0.5em;
-}
-
-.menuitem {
-    display: inline-block;
-    padding: 0.5em;
-    margin-right: 0.5em;
-    background: #033;
-    color: #fff;
-    border: 2px solid #fff;
-    border-radius: 0.5em;
-    font-weight: bold;
-    text-decoration: none;
-}
-
-.menuitem:hover {
-    background: #066;
-}
-
-.menuitem:active, .menuselected {
-    background: #099; 
-}
-
-.trackspace {
-    padding: 1em;
-}
-
-.trackcontainer {
-    white-space: nowrap;
-    padding-bottom: 1em;
-}
-
-.trackview {
-    display: inline-block;
-}
-
-.trackselected {
-    background: #366;
-}
-
-.trackheader {
-    display: inline-block;
-    width: 5em;
-    height: 124px;
+    box-sizing: border-box;
+    min-width: 20em;
+    max-height: 90%;
+    left: 1em;
+    top: 1em;
+    margin-left: 1em;
+    padding: 2em 0.5em 0.5em 0.5em;
+    background-color: var(--bg-plain);
+    border: 1px solid var(--border-plain);
+    border-radius: 0.25em;
     overflow: auto;
-    border: 2px solid #fff;
-    text-align: center;
 }
 
-.trackdesc {
-    padding: 0.5em;
+.row {
+    width: 100%;
+    margin-bottom: 0.5em;
 }
 
-.trackpart {
-    width: 64px;
-    height: 128px;
-}
-
-.inputlabel {
-    display: inline-block;
-    width: 10em;
-    text-align: right;
-    margin-right: 1em;
-}
-
-.modalpop {
+.main {
     position: fixed;
     left: 0;
     right: 0;
     top: 0;
     bottom: 0;
-    max-width: 100%;
-    max-height: 100%;
+}
+
+.menu {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    background-color: var(--bg-wave);
+    border-bottom: 2px solid var(--fg);
+}
+
+#project {
+    flex: auto;
     overflow: auto;
-    background: rgba(0,0,0,0.5);
+    white-space: nowrap;
 }
 
-.modal {
-    position: fixed;
-    background: #033;
-    padding: 0.5em;
-    border: 2px solid #fff;
-    border-radius: 0.5em;
+.status-bar {
+    background: var(--bg-status);
+    color: var(--fg-status);
+    min-height: 1em;
+}
+
+.status {
+    flex: auto;
     text-align: center;
+    padding: 0.25em;
+    cursor: default;
 }
 
-.modalform {
-    text-align: left;
+.status a {
+    color: var(--link-color-status);
+}
+
+.layer-separator {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+}
+
+.dialog-wrapper {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    flex-direction: column;
+}
+
+.dialog-wrapper-inner {
+    display: flex;
+    flex-direction: row;
+}
+
+.stretch {
+    flex: auto;
+}
+
+.dialog {
+    position: relative;
+
+    background-color: var(--bg-wave);
+    border: 2px solid var(--fg);
+    border-radius: 0.25em;
+    padding: 1em;
+
+    max-width: 90%;
+    max-height: 90vh;
+    overflow: auto;
+}
+
+button:not(.plain), .button {
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, border-radius 0.2s ease-in-out;
+    background-color: var(--bg);
+    color: #fff;
+    border-radius: 0;
+    border: 0;
+    cursor: pointer;
+    display: inline-block;
+    height: 2.85em;
+    font-size: 1rem;
+    line-height: 2.95em;
+    text-align: center;
+    text-decoration: none;
+    text-transform: uppercase;
+    white-space: nowrap;
+    padding: 0 0.5em 0 0.5em;
+}
+
+button.nouppercase, .button.nouppercase {
+    text-transform: none;
+}
+
+button:not(.plain):focus, .button:focus {
+    outline: 1px dotted rgba(255, 255, 255, 0.35);
+    outline-offset: -0.5em;
+}
+
+button:not(.plain):hover, .button:hover {
+    background-color: var(--bg-hover);
+    border-radius: 1em;
+}
+
+button.off, button.off:hover {
+    background-color: var(--bg-off);
+    border-radius: 0;
+}
+
+button.close-button {
+    position: absolute;
+    height: 2em;
+    line-height: 2em;
+    top: 0.25em;
+    right: 0.25em;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="email"],
+select,
+textarea {
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+    background-color: var(--bg);
+    color: #fff;
+    border-radius: 0;
+    border: none;
+    border: solid 1px;
+    outline: 0;
+    padding: 0.5em;
+    text-decoration: none;
+}
+
+select:hover {
+    background-color: var(--bg-hover);
+}
+
+input[type="checkbox"] {
+    -webkit-appearance: none;
+    appearance: none;
+    position: relative;
+    display: inline-block;
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+    background-color: var(--bg);
+    border: 1px solid #fff;
+    padding: 0.6em;
+    margin: 0;
+}
+
+input[type="checkbox"]:hover {
+    background-color: var(--bg-hover);
+}
+
+input[type="checkbox"]:checked:after {
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    color: #fff;
+    content: "\f00c";
+    position: absolute;
+    font-size: 0.9em;
+    left: 0.15em;
+    top: 0.1em;
+}
+
+/* Tracks */
+.track-spacer {
+    min-height: 2em;
+}
+
+.track-info {
+    display: inline-block;
+    position: sticky;
+    left: 0px;
+    box-sizing: border-box;
+    height: 128px;
+    width: 128px;
+    overflow: auto;
+    background-color: var(--bg-wave);
+    border: 2px solid var(--fg);
+    will-change: transform;
+}
+
+.track-display {
+    display: inline-block;
+    position: relative;
 }

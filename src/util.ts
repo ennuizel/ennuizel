@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020 Yahweasel
+ * Copyright (c) 2021 Yahweasel
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -13,3 +13,23 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+
+/**
+ * Convert a time in seconds to a string timestamp.
+ * @param s  The time.
+ */
+export function timestamp(s: number) {
+    const h = ~~(s / 3600);
+    s -= h * 3600;
+    const m = ~~(s / 60);
+    s -= m * 60;
+
+    let hs = h + "";
+    if (hs.length < 2) hs = "0" + hs;
+    let ms = m + "";
+    if (ms.length < 2) ms = "0" + ms;
+    let ss = s.toFixed(3);
+    if (s < 10) ss = "0" + ss;
+
+    return `${hs}:${ms}:${ss}`;
+}
