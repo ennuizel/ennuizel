@@ -35,7 +35,7 @@ import * as store from "./store";
         // libav.js
         if (typeof LibAV === "undefined") {
             LibAV = {base: "libav/"};
-            await ui.loadLibrary("libav/libav-2.3c.4.4-fat.js");
+            await ui.loadLibrary("libav/libav-2.3d.4.4-fat.js");
         }
 
         /* The technique to get persistence (which also implies larger/no

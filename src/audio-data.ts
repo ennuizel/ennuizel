@@ -42,8 +42,11 @@ const log2 = Math.log(2);
 let libav: any = null;
 
 async function loadLibAV() {
-    if (!libav)
+    if (!libav) {
+        // This instance is only used for constants (quite silly)
         libav = await LibAV.LibAV();
+        libav.terminate();
+    }
 }
 
 /**

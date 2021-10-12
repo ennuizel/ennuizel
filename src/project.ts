@@ -447,8 +447,7 @@ async function loadFile(raw: Blob, opts: {
                     const packets = await libavReader.read();
 
                     if (packets.done) {
-                        for (const idx in demuxerControllers)
-                            demuxerControllers[idx].close();
+                        demuxerControllers[stream.index].close();
                         break;
 
                     } else {
@@ -555,6 +554,8 @@ async function loadFile(raw: Blob, opts: {
     // Now wait for all the tracks
     await Promise.all(trackPromises);
 
+    libav.terminate();
+
     // And save it
     await project.save();
     for (const idx in audioTracks)
@@ -650,7 +651,7 @@ export async function play() {
 
         // Now make all the streams
         const streams = await Promise.all(
-            project.tracks.map(x => x.stream(streamOpts).getReader())
+            project.tracks.map(x => x.stream(streamOpts))
         );
 
         // How many are currently ready to play?
@@ -662,7 +663,7 @@ export async function play() {
         let playing = streams.length;
 
         // Convert them to sources
-        const sources: any[] = [];
+        const sourcePromises: Promise<any>[] = [];
         for (let i = 0; i < streams.length; i++) {
             const track = project.tracks[i];
             const stream = streams[i];
@@ -684,7 +685,7 @@ export async function play() {
 
             if (track === longest) {
                 // This is the longest track, so use its timestamps
-                sources.push(await audio.createSource(stream, {
+                sourcePromises.push(audio.createSource(stream, {
                     status: ts => {
                         if (playing) {
                             select.setPlayHead(sel.start + ts / ac.sampleRate);
@@ -697,10 +698,12 @@ export async function play() {
                 }));
 
             } else {
-                sources.push(await audio.createSource(stream, {ready, end}));
+                sourcePromises.push(audio.createSource(stream, {ready, end}));
 
             }
         }
+
+        const sources = await Promise.all(sourcePromises);
 
         // Wait until they're all ready
         await readyPromise;
@@ -708,10 +711,10 @@ export async function play() {
         // Prepare to *stop* playback
         stopPlayback = () => {
             playing = 0;
-            for (const stream of streams)
-                stream.cancel();
-            for (const source of sources)
+            for (const source of sources) {
                 source.node.disconnect(ac.destination);
+                source.stop();
+            }
             select.setPlayHead(null);
             stopPlayback = null;
         };

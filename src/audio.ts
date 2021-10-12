@@ -19,7 +19,7 @@ declare let LibAV: any;
 
 import * as ui from "./ui";
 
-import { ReadableStreamDefaultReader } from "web-streams-polyfill/ponyfill";
+import { ReadableStream } from "web-streams-polyfill/ponyfill";
 
 let ac: AudioContext = null;
 
@@ -62,12 +62,13 @@ export async function getAudioContext() {
  * so that the caller can cancel it.
  * @param stream  The input stream.
  */
-export async function createSource(rdr: ReadableStreamDefaultReader, opts: {
+export async function createSource(stream: ReadableStream, opts: {
     status?: (timestamp: number) => unknown,
     ready?: () => unknown,
     end?: () => unknown
 } = {}) {
     const ac = await getAudioContext();
+    const rdr = stream.getReader();
 
     // We need at least the first packet of data to create our filter
     let first = await rdr.read();
@@ -77,7 +78,8 @@ export async function createSource(rdr: ReadableStreamDefaultReader, opts: {
             opts.ready();
         return {
             node: ac.createBufferSource(),
-            start: ()=>{}
+            start: ()=>{},
+            stop: ()=>{}
         };
     }
 
@@ -167,6 +169,10 @@ export async function createSource(rdr: ReadableStreamDefaultReader, opts: {
         node: ret,
         start() {
             ret.port.postMessage({c: "play"});
+        },
+        stop() {
+            rdr.cancel();
+            libav.terminate();
         }
     };
 }
