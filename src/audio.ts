@@ -64,6 +64,7 @@ export async function getAudioContext() {
  */
 export async function createSource(rdr: ReadableStreamDefaultReader, opts: {
     status?: (timestamp: number) => unknown,
+    ready?: () => unknown,
     end?: () => unknown
 } = {}) {
     const ac = await getAudioContext();
@@ -72,7 +73,12 @@ export async function createSource(rdr: ReadableStreamDefaultReader, opts: {
     let first = await rdr.read();
     if (first.done) {
         // Useless
-        return ac.createBufferSource();
+        if (opts.ready)
+            opts.ready();
+        return {
+            node: ac.createBufferSource(),
+            start: ()=>{}
+        };
     }
 
     // Create the filter
@@ -103,7 +109,7 @@ export async function createSource(rdr: ReadableStreamDefaultReader, opts: {
     });
 
     // Send the first bit
-    ret.port.postMessage(firstFrames.map(x => x.data));
+    ret.port.postMessage({c: "data", d: firstFrames.map(x => x.data)});
     first = firstFrames = null;
 
     // Associate its port with reading
@@ -112,6 +118,11 @@ export async function createSource(rdr: ReadableStreamDefaultReader, opts: {
             // Time update
             if (opts.status)
                 opts.status(ev.data.d);
+
+        } else if (ev.data.c === "ready") {
+            // Ready to play
+            if (opts.ready)
+                opts.ready();
 
         } else if (ev.data.c === "done") {
             // Stream over
@@ -132,10 +143,13 @@ export async function createSource(rdr: ReadableStreamDefaultReader, opts: {
 
                 // Get any last input
                 const frames = await libav.ff_filter_multi(buffersrc_ctx, buffersink_ctx, frame, [], true);
-                ret.port.postMessage(frames.length ? frames.map(x => x.data) : null);
+                ret.port.postMessage({
+                    c: "data",
+                    d: frames.length ? frames.map(x => x.data) : null
+                });
 
             } else {
-                ret.port.postMessage(null);
+                ret.port.postMessage({c: "data", d: null});
 
             }
 
@@ -144,10 +158,15 @@ export async function createSource(rdr: ReadableStreamDefaultReader, opts: {
             const frames =
                 await libav.ff_filter_multi(buffersrc_ctx, buffersink_ctx,
                     frame, [rawData.value]);
-            ret.port.postMessage(frames.map(x => x.data));
+            ret.port.postMessage({c: "data", d: frames.map(x => x.data)});
 
         }
     };
 
-    return ret;
+    return {
+        node: ret,
+        start() {
+            ret.port.postMessage({c: "play"});
+        }
+    };
 }

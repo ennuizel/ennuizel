@@ -653,14 +653,27 @@ export async function play() {
             project.tracks.map(x => x.stream(streamOpts).getReader())
         );
 
+        // How many are currently ready to play?
+        let readyCt = 0;
+        let readyRes: (x:any)=>unknown = null;
+        const readyPromise = new Promise(res => readyRes = res);
+
         // How many are currently playing?
         let playing = streams.length;
 
         // Convert them to sources
-        const sources: AudioNode[] = [];
+        const sources: any[] = [];
         for (let i = 0; i < streams.length; i++) {
             const track = project.tracks[i];
             const stream = streams[i];
+
+            // Callbacks
+            const ready = () => {
+                if (++readyCt === streams.length)
+                    readyRes(null);
+                console.log("Ready count: " + readyCt);
+            };
+
             const end = () => {
                 if (playing) {
                     playing--;
@@ -679,14 +692,18 @@ export async function play() {
                         }
                     },
 
+                    ready,
                     end
                 }));
 
             } else {
-                sources.push(await audio.createSource(stream, {end}));
+                sources.push(await audio.createSource(stream, {ready, end}));
 
             }
         }
+
+        // Wait until they're all ready
+        await readyPromise;
 
         // Prepare to *stop* playback
         stopPlayback = () => {
@@ -694,14 +711,18 @@ export async function play() {
             for (const stream of streams)
                 stream.cancel();
             for (const source of sources)
-                source.disconnect(ac.destination);
+                source.node.disconnect(ac.destination);
             select.setPlayHead(null);
             stopPlayback = null;
         };
 
-        // Play all the sources
+        // Connect them all
         for (const source of sources)
-            source.connect(ac.destination);
+            source.node.connect(ac.destination);
+
+        // And play them all
+        for (const source of sources)
+            source.start();
     });
 }
 

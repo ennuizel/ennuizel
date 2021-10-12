@@ -53,6 +53,9 @@ class EnnuizelPlayer extends AudioWorkletProcessor {
     // Threshold for getting more data
     threshold: number;
 
+    // Set when we should be playing
+    playing: boolean;
+
     // Set when we're done reading data
     done: boolean;
 
@@ -66,7 +69,7 @@ class EnnuizelPlayer extends AudioWorkletProcessor {
         this.bufSz = 0;
         this.played = 0;
         this.threshold = options.parameterData.sampleRate * 30;
-        this.done = false;
+        this.playing = this.done = false;
         this.resume = null;
 
         this.reader();
@@ -77,19 +80,29 @@ class EnnuizelPlayer extends AudioWorkletProcessor {
 
         // Our message handler
         this.port.onmessage = ev => {
-            if (!ev.data) {
+            if (ev.data.c === "play") {
+                this.playing = true;
+            } else if (ev.data.c !== "data") {
+                return;
+            }
+
+            if (!ev.data.d) {
                 // No more data!
                 recv(false);
                 return;
             }
-            const len = ev.data.map(x => x[0].length).reduce((x, y) => x + y);
-            this.buf = this.buf.concat(ev.data);
+
+            const len = ev.data.d.map(x => x[0].length).reduce((x, y) => x + y);
+            this.buf = this.buf.concat(ev.data.d);
             this.bufSz += len;
             recv(true);
         };
 
         // Expect our first piece of data
         await new Promise(res => recv = res);
+
+        // Inform the host that we're ready only once
+        let informedReady = false;
 
         // We expect data at the start
         while (true) {
@@ -99,17 +112,27 @@ class EnnuizelPlayer extends AudioWorkletProcessor {
                 if (!(await new Promise(res => recv = res))) {
                     // No more data!
                     this.done = true;
-                    return;
+                    break;
                 }
             } else {
                 // Enough data. Wait until we've played down.
+                if (!informedReady) {
+                    this.port.postMessage({c: "ready"});
+                    informedReady = true;
+                }
                 await new Promise(res => this.resume = res);
                 this.resume = null;
             }
         }
+
+        if (!informedReady)
+            this.port.postMessage({c: "ready"});
     }
 
     process(inputs: Float32Array[][], outputs: Float32Array[][], parameters: Record<string, Float32Array>) {
+        if (!this.playing)
+            return true;
+
         const output = outputs[0];
         let offset = 0;
         let remaining = output[0].length;
