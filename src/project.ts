@@ -672,7 +672,6 @@ export async function play() {
             const ready = () => {
                 if (++readyCt === streams.length)
                     readyRes(null);
-                console.log("Ready count: " + readyCt);
             };
 
             const end = () => {
