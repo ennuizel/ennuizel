@@ -120,16 +120,19 @@ export async function createSource(stream: ReadableStream, opts: {
             // Time update
             if (opts.status)
                 opts.status(ev.data.d);
+            return;
 
         } else if (ev.data.c === "ready") {
             // Ready to play
             if (opts.ready)
                 opts.ready();
+            return;
 
         } else if (ev.data.c === "done") {
             // Stream over
             if (opts.end)
                 opts.end();
+            return;
 
         } else if (ev.data.c !== "read") {
             // Unknown!
