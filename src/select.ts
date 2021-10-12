@@ -105,7 +105,6 @@ export async function addSelectable(sel: Selectable) {
         selectedEls.clear();
         selectedEls.add(sel);
         activeSelectingRange = false;
-        console.log("Select start: " + selectStart);
         updateDisplay();
     });
 
@@ -278,8 +277,6 @@ async function updateDisplay() {
     });
 
     selPromise = (async function() {
-        console.log("Updating display");
-
         // Figure out where we're drawing
         const selectingRange = (selectStart !== selectEnd);
         const startPx = Math.floor(selectStart * ui.pixelsPerSecond * ui.ui.zoom);
