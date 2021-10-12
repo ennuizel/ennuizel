@@ -21,6 +21,7 @@ import * as audio from "./audio";
 import * as avthreads from "./avthreads";
 import * as ui from "./ui";
 import * as project from "./project";
+import * as select from "./select";
 import * as store from "./store";
 
 (async function() {
@@ -67,6 +68,7 @@ import * as store from "./store";
 
         await avthreads.load();
         await project.load();
+        await select.load();
         await store.load();
 
     });

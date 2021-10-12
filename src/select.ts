@@ -84,14 +84,9 @@ export let playHead: number = null;
 export async function addSelectable(sel: Selectable) {
     // Make the selection canvas
     const c = sel.display = ui.mk("canvas", sel.wrapper, {
+        className: "selection-canvas",
         width: 1280, // Will be updated automatically
         height: ui.trackHeight
-    });
-    Object.assign(c.style, {
-        position: "absolute",
-        left: "0px",
-        top: "0px",
-        height: ui.trackHeight + "px"
     });
     selectables.push(sel);
     if (selectedEls.size === 0)
@@ -99,9 +94,10 @@ export async function addSelectable(sel: Selectable) {
 
     // Make sure it actually is selectable
     c.addEventListener("mousedown", ev => {
+        const x = ev.offsetX + ui.ui.main.scrollLeft;
         selectStart = selectEnd = selectAnchorTime =
-            ev.offsetX / (ui.pixelsPerSecond * ui.ui.zoom);
-        selectAnchor = ev.offsetX;
+            x / (ui.pixelsPerSecond * ui.ui.zoom);
+        selectAnchor = x;
         selectedEls.clear();
         selectedEls.add(sel);
         activeSelectingRange = false;
@@ -112,16 +108,18 @@ export async function addSelectable(sel: Selectable) {
         if (selectAnchor === null)
             return;
 
+        const x = ev.offsetX + ui.ui.main.scrollLeft;
+
         // Make sure we're in the selection
         if (!selectedEls.has(sel))
             selectedEls.add(sel);
 
         // Decide whether to do range selection
-        if (!activeSelectingRange && Math.abs(ev.offsetX - selectAnchor) >= 16)
+        if (!activeSelectingRange && Math.abs(x - selectAnchor) >= 16)
             activeSelectingRange = true;
 
         // Update the range selection
-        const time = ev.offsetX / (ui.pixelsPerSecond * ui.ui.zoom);
+        const time = x / (ui.pixelsPerSecond * ui.ui.zoom);
         if (activeSelectingRange) {
             if (time < selectAnchorTime) {
                 selectStart = time;
@@ -139,7 +137,7 @@ export async function addSelectable(sel: Selectable) {
         updateDisplay();
     });
 
-    await updateDurations();
+    await updateDisplay();
 }
 
 // When we lift the mouse *anywhere*, unanchor
@@ -158,7 +156,7 @@ document.body.addEventListener("keydown", async function(ev) {
         updateDisplay();
 
     } else if (ev.key === "End") {
-        selectStart = selectEnd = await updateDurations();
+        selectStart = selectEnd = maxDuration();
         updateDisplay();
 
     } else if (ev.key === "a" && ev.ctrlKey) {
@@ -180,7 +178,7 @@ export async function removeSelectable(track: any) {
     if (sel) {
         const idx = selectables.indexOf(sel);
         selectables.splice(idx, 1);
-        await updateDurations();
+        await updateDisplay();
     }
 }
 
@@ -216,32 +214,12 @@ export function getSelection(): Selection {
 }
 
 /**
- * Update our durations, and with them, the width of all our selectables. You
- * usually don't need to await the result of this, unless you want the total
- * duration.
+ * Get the maximum duration of any selectable.
  */
-export async function updateDurations() {
+function maxDuration() {
     let duration = 0;
-
-    // Make sure we only run one updateDurations at a time
-    await selPromise;
-
-    selPromise = (async function() {
-        // Get the max duration (plus a bit of buffer for floating point madness)
-        for (const sel of selectables)
-            duration = Math.max(duration, sel.duration());
-
-        // Convert to pixels
-        const width = Math.round((duration+1) * ui.pixelsPerSecond * ui.ui.zoom);
-
-        // And make all our canvases the right size
-        for (const sel of selectables)
-            sel.display.width = width;
-    })();
-
-    // Update the display when we update the durations
-    await updateDisplay();
-
+    for (const sel of selectables)
+        duration = Math.max(duration, sel.duration());
     return duration;
 }
 
@@ -277,15 +255,30 @@ async function updateDisplay() {
     });
 
     selPromise = (async function() {
+        const scrollLeft = ui.ui.main.scrollLeft;
+        const width = window.innerWidth - 128 /* FIXME: magic number */;
+
+        // Relocate each canvas
+        for (const sel of selectables) {
+            sel.display.style.left = scrollLeft + "px";
+            sel.display.width = width;
+        }
+
         // Figure out where we're drawing
         const selectingRange = (selectStart !== selectEnd);
-        const startPx = Math.floor(selectStart * ui.pixelsPerSecond * ui.ui.zoom);
-        const endPx = Math.max(
-            Math.ceil(selectEnd * ui.pixelsPerSecond * ui.ui.zoom),
-            startPx + 1
+        const startPx = Math.max(
+            Math.floor(selectStart * ui.pixelsPerSecond * ui.ui.zoom - scrollLeft),
+            0
         );
-        const playHeadPx = (playHead === null) ? null : Math.floor(
-            playHead * ui.pixelsPerSecond * ui.ui.zoom
+        const endPx = Math.min(
+            Math.max(
+                Math.ceil(selectEnd * ui.pixelsPerSecond * ui.ui.zoom - scrollLeft),
+                startPx + 1
+            ),
+            width
+        );
+        const playHeadPx = (playHead === null) ? null : Math.round(
+            playHead * ui.pixelsPerSecond * ui.ui.zoom - scrollLeft
         );
 
         // And draw it
@@ -318,4 +311,11 @@ async function updateDisplay() {
     })();
 
     await selPromise;
+}
+
+/**
+ * Loader for selection. Just makes sure the graphics are updated when we scroll.
+ */
+export async function load() {
+    ui.ui.main.addEventListener("scroll", updateDisplay);
 }

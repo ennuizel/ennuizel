@@ -687,10 +687,8 @@ export async function play() {
                 // This is the longest track, so use its timestamps
                 sourcePromises.push(audio.createSource(stream, {
                     status: ts => {
-                        if (playing) {
+                        if (playing)
                             select.setPlayHead(sel.start + ts / ac.sampleRate);
-                            select.updateDurations();
-                        }
                     },
 
                     ready,
@@ -740,6 +738,8 @@ window.addEventListener("keydown", async function(ev) {
             el.tagName === "A" ||
             el.tagName === "INPUT")
             return;
+
+        ev.preventDefault();
 
         if (stopPlayback)
             stopPlayback();

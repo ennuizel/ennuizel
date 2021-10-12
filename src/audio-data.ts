@@ -204,7 +204,6 @@ export class AudioTrack {
 
         // Then make them a tree
         this.root = AudioData.balanceArray(d);
-        select.updateDurations();
     }
 
     /**
@@ -276,9 +275,6 @@ export class AudioTrack {
         // Rebalance the tree now that we're done
         if (this.root)
             this.root = this.root.rebalance();
-
-        // Redisplay.
-        select.updateDurations();
 
         await avthreads.flush();
     }
@@ -587,10 +583,12 @@ export class AudioData {
      */
     constructor(public id: string, public track: AudioTrack) {
         this.pos = this.len = 0;
-        this.raw = this.img = this.waveform = null;
+        this.raw = this.waveform = null;
         this.rawModified = false;
         this.readers = 0;
         this.parent = this.left = this.right = null;
+
+        this.img = ui.mk("img", track.waveform);
     }
 
     /**
@@ -616,11 +614,11 @@ export class AudioData {
         if (this.waveform) {
             // FIXME: Duplication
             const w = ~~(this.len / this.track.channels / this.track.sampleRate * ui.pixelsPerSecond);
-            this.img = ui.mk("img", this.track.display, {
-                src: URL.createObjectURL(this.waveform)
+            Object.assign(this.img.style, {
+                width: "calc(" + w + "px * var(--zoom-wave))",
+                height: ui.trackHeight + "px"
             });
-            this.img.style.width = "calc(" + w + "px * var(--zoom-wave))";
-            this.img.style.height = ui.trackHeight + "px";
+            this.img.src = URL.createObjectURL(this.waveform);
         }
     }
 
@@ -823,8 +821,6 @@ export class AudioData {
 
     // Compress and render this data, and store it
     private async compress() {
-        if (!this.img)
-            this.img = ui.mk("img", this.track.display);
         await avthreads.enqueue(libav => this.wavpack(libav, this.raw));
         await avthreads.enqueue(libav => this.render(libav, this.raw));
     }
@@ -953,10 +949,11 @@ export class AudioData {
         await this.track.project.store.setItem("audio-data-wave-" + this.id, this.waveform);
 
         // And make it an image
-        const ourl = URL.createObjectURL(this.waveform);
-        this.img.style.width = "calc(" + w + "px * var(--zoom-wave))";
-        this.img.style.height = ui.trackHeight + "px";
-        this.img.src = ourl;
+        Object.assign(this.img.style, {
+            width: "calc(" + w + "px * var(--zoom-wave))",
+            height: ui.trackHeight + "px"
+        });
+        this.img.src = URL.createObjectURL(this.waveform);
     }
 
     /**

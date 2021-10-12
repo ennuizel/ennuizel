@@ -278,3 +278,10 @@ input[type="checkbox"]:checked:after {
     display: inline-block;
     position: relative;
 }
+
+.selection-canvas {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    height: 128px;
+}
