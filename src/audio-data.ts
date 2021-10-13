@@ -144,11 +144,6 @@ export class AudioTrack {
         // UI
         this.spacer = ui.mk("div", ui.ui.main, {className: "track-spacer"});
         this.info = ui.mk("div", ui.ui.main, {className: "track-info"});
-        this.infoName = ui.txt(this.info, {
-            className: "row",
-            value: this.name
-        });
-        this.uiSetName(this.infoName);
         this.display = ui.mk("div", ui.ui.main, {className: "track-display"});
         this.waveform = ui.mk("div", this.display, {className: "track-waveform"});
 
@@ -200,7 +195,6 @@ export class AudioTrack {
         const t: any = await this.project.store.getItem("audio-track-" + this.id);
         if (!t) return;
         this.name = t.name || "";
-        this.infoName.value = this.name;
         this.format = t.format;
         this.sampleRate = t.sampleRate;
         this.channels = t.channels;
@@ -215,6 +209,31 @@ export class AudioTrack {
 
         // Then make them a tree
         this.root = AudioData.balanceArray(d);
+    }
+
+    /**
+     * Delete this track.
+     */
+    async del() {
+        // First delete all the audio data
+        const d: AudioData[] = [];
+        if (this.root)
+            this.root.fillArray(d);
+        for (const ad of d)
+            await ad.del();
+
+        // Then delete this
+        await this.project.store.removeItem("audio-track-" + this.id);
+
+        // Remove it from the DOM
+        try {
+            this.spacer.parentNode.removeChild(this.spacer);
+            this.info.parentNode.removeChild(this.info);
+            this.display.parentNode.removeChild(this.display);
+        } catch (ex) {}
+
+        // Remove it as a selectable
+        select.removeSelectable(this);
     }
 
     /**
@@ -541,23 +560,6 @@ export class AudioTrack {
     }
 
     /**
-     * Set this box to change the name.
-     * @param inp  The input box.
-     */
-    uiSetName(inp: HTMLInputElement) {
-        let timeout: number = null;
-        inp.oninput = ev => {
-            if (timeout !== null)
-                clearTimeout(timeout);
-            timeout = setTimeout(() => {
-                timeout = null;
-                this.name = (<HTMLInputElement> ev.target).value;
-                this.save();
-            }, 1000);
-        };
-    }
-
-    /**
      * Root of the AudioData tree.
      */
     private root: AudioData;
@@ -591,11 +593,6 @@ export class AudioTrack {
      * UI info box.
      */
     info: HTMLElement;
-
-    /**
-     * UI name box.
-     */
-    infoName: HTMLInputElement;
 
     /**
      * UI display box.
@@ -658,6 +655,19 @@ export class AudioData {
             });
             this.img.src = URL.createObjectURL(this.waveform);
         }
+    }
+
+    /**
+     * Delete this AudioData.
+     */
+    async del() {
+        // Make sure it doesn't get written later
+        this.readers = Infinity;
+
+        // Delete it from the store
+        const store = this.track.project.store;
+        await store.removeItem("audio-data-" + this.id);
+        await store.removeItem("audio-data-wave-" + this.id);
     }
 
     /**

@@ -79,8 +79,72 @@ export class Project {
         for (const trackId of p.tracks) {
             const track = new audioData.AudioTrack(trackId, this);
             await track.load();
-            this.tracks.push(track);
+            this.addTrack(track);
         }
+    }
+
+    /**
+     * Add a track.
+     * @param track  The track to add.
+     */
+    async addTrack(track: Track) {
+        const self = this;
+
+        // Set up its info box
+        const name = ui.txt(track.info, {
+            className: "row",
+            value: track.name
+        });
+
+        let timeout: number = null;
+        name.oninput = ev => {
+            if (timeout !== null)
+                clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                timeout = null;
+                track.name = (<HTMLInputElement> ev.target).value;
+                track.save();
+            }, 1000);
+        };
+
+        const del = ui.btn(track.info, "Delete", {className: "row small"});
+
+        del.onclick = function() {
+            ui.dialog(async function(d) {
+                ui.mk("div", d.box, {innerHTML: "Are you sure?<br/><br/>"});
+                const yes = ui.btn(d.box, "Yes, delete this track", {className: "row"});
+                const no = ui.btn(d.box, "No, cancel", {className: "row"});
+                no.focus();
+
+                no.onclick = () => {
+                    ui.dialogClose(d);
+                };
+
+                yes.onclick = () => {
+                    ui.loading(async function(d) {
+                        await self.removeTrack(track);
+                    }, {
+                        reuse: d
+                    });
+                };
+            }, {
+                closeable: true
+            });
+        };
+
+        // And add it to the list
+        this.tracks.push(track);
+    }
+
+    /**
+     * Remove a track.
+     */
+    async removeTrack(track: Track) {
+        await track.del();
+        const idx = this.tracks.indexOf(track);
+        if (idx >= 0)
+            this.tracks.splice(idx, 1);
+        await this.save();
     }
 
     /**
@@ -483,7 +547,7 @@ async function loadFile(fileName: string, raw: Blob, opts: {
             project,
             {name: trackName}
         );
-        project.tracks.push(track);
+        project.addTrack(track);
         audioTracks[stream.index] = track;
 
         // Make the decoder

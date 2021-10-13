@@ -187,6 +187,11 @@ button.nouppercase, .button.nouppercase {
     text-transform: none;
 }
 
+button.small, .button.small {
+    height: 1.5em;
+    line-height: 1.6em;
+}
+
 button:not(.plain):focus, .button:focus {
     outline: 1px dotted rgba(255, 255, 255, 0.35);
     outline-offset: -0.5em;
@@ -271,6 +276,7 @@ input[type="checkbox"]:checked:after {
     height: 128px;
     width: 128px;
     overflow: auto;
+    white-space: normal;
     background-color: var(--bg-wave);
     border: 2px solid var(--fg);
     will-change: transform;
