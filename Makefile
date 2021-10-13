@@ -20,5 +20,5 @@ clean:
 	rm -f localforage.min.js
 	rm -f ennuizel.js awp/ennuizel-player.js
 
-mrproper: clean
+distclean: clean
 	rm -rf node_modules
