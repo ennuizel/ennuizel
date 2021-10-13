@@ -95,6 +95,8 @@ export async function addSelectable(sel: Selectable) {
     // Make sure it actually is selectable
     c.addEventListener("mousedown", ev => {
         ev.preventDefault();
+        if (document.activeElement)
+            (<HTMLElement> document.activeElement).blur();
 
         const x = ev.offsetX + ui.ui.main.scrollLeft;
         selectStart = selectEnd = selectAnchorTime =
