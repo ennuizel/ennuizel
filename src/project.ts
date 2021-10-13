@@ -294,7 +294,7 @@ async function newProject(name: string) {
     // Create this project
     project = new Project(await id36.genFresh(store.store, "ez-project-"));
     const id = project.id;
-    await store.store.setItem("ez-project-" + id, true);
+    await store.store.setItem("ez-project-" + id, {name});
     project.name = name;
     await project.save();
 
