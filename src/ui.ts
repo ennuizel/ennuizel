@@ -31,11 +31,11 @@ export const ui = {
         filters: <HTMLButtonElement> null
     },
 
-    // Storage space indicator
-    storageIndicator: <HTMLElement> null,
-
     // Main project space
     main: <HTMLElement> null,
+
+    // Status bar
+    status: <HTMLElement> null,
 
     // All dialogs
     dialogs: <Dialog[]> [],
@@ -77,8 +77,8 @@ export function load() {
         tracks: gebi("b-tracks"),
         filters: gebi("b-filters")
     };
-    ui.storageIndicator = gebi("storage-indicator");
     ui.main = gebi("project");
+    ui.status = gebi("status");
 
     ui.utilityCSS = mk("style", document.body, {type: "text/css"});
     zoom();

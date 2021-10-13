@@ -14,6 +14,7 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+import * as status from "./status";
 import * as ui from "./ui";
 
 import type * as localforageT from "localforage";
@@ -180,6 +181,7 @@ async function updateIndicator() {
         return;
 
     const estimate = await navigator.storage.estimate();
-    ui.ui.storageIndicator.innerHTML =
-        "Storage: " + Math.round(estimate.usage / estimate.quota * 100) + "%&nbsp;";
+    status.pushStatus("storage",
+        "Storage: " + Math.round(estimate.usage / estimate.quota * 100) + "%"
+    );
 }

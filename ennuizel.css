@@ -109,7 +109,8 @@ a {
 .status-bar {
     background: var(--bg-status);
     color: var(--fg-status);
-    min-height: 1em;
+    padding: 0.1em 1em 0.1em 1em;
+    text-align: center;
 }
 
 .status {
