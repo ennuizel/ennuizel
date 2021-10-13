@@ -364,14 +364,10 @@ async function loadProject(id: string, store?: store.UndoableStore) {
 }
 
 /**
- * Unload the current project, if one is loaded. Saves the project's state as
- * well.
+ * Unload the current project, if one is loaded.
  */
 async function unloadProject() {
     if (project) {
-        // Save the project state
-        await project.save({deep: true});
-
         // Remove the undo info
         project.store.dropUndo();
 
