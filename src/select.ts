@@ -98,12 +98,58 @@ export async function addSelectable(sel: Selectable) {
             (<HTMLElement> document.activeElement).blur();
 
         const x = ev.offsetX + ui.ui.main.scrollLeft;
-        selectStart = selectEnd = selectAnchorTime =
-            x / (ui.pixelsPerSecond * ui.ui.zoom);
-        selectAnchor = x;
-        selectedEls.clear();
-        selectedEls.add(sel);
-        activeSelectingRange = false;
+
+        /* Behavior of clicking on selection:
+         * With ctrl: Add or remove this track from the selection list.
+         * With shift: Add this track if it's not selected; extend the time
+         * otherwise.
+         * With neither: Click to select just this track, drag to extend
+         * selection.
+         */
+
+        if (ev.ctrlKey) {
+            // Add or remove this track
+            if (selectedEls.has(sel))
+                selectedEls.delete(sel);
+            else
+                selectedEls.add(sel);
+
+        } else if (ev.shiftKey) {
+            // Extending an existing selection
+            if (selectedEls.has(sel)) {
+                // In time
+                const selectTime = x / (ui.pixelsPerSecond * ui.ui.zoom);
+                const startDist = Math.abs(selectTime - selectStart);
+                const endDist = Math.abs(selectTime - selectEnd);
+                if (selectTime < selectStart ||
+                    (selectTime <= selectEnd && startDist < endDist)) {
+                    selectAnchorTime = selectEnd;
+                    selectStart = selectTime;
+                } else {
+                    selectAnchorTime = selectStart;
+                    selectEnd = selectTime;
+                }
+
+                selectAnchor = x;
+                activeSelectingRange = true;
+
+            } else {
+                // In space
+                selectedEls.add(sel);
+
+            }
+
+        } else {
+            // Starting a fresh selection
+            selectStart = selectEnd = selectAnchorTime =
+                x / (ui.pixelsPerSecond * ui.ui.zoom);
+            selectAnchor = x;
+            selectedEls.clear();
+            selectedEls.add(sel);
+            activeSelectingRange = false;
+
+        }
+
         updateDisplay();
     });
 
