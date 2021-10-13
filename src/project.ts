@@ -105,10 +105,11 @@ export class Project {
         name.oninput = ev => {
             if (timeout !== null)
                 clearTimeout(timeout);
-            timeout = setTimeout(() => {
+            timeout = setTimeout(async function() {
                 timeout = null;
+                await project.store.undoPoint();
                 track.name = (<HTMLInputElement> ev.target).value;
-                track.save();
+                await track.save();
             }, 1000);
         };
 
