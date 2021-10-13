@@ -27,12 +27,12 @@ declare let localforage : LocalForage;
 export class Store {
     constructor(public localForage: LocalForage) {}
 
-    createInstance(opts: {name: string}) {
-        return new Store(this.localForage.createInstance(opts));
+    static createInstance(opts: {name: string}) {
+        return new Store(localforage.createInstance(opts));
     }
 
-    dropInstance(opts: {name: string}) {
-        return this.localForage.dropInstance(opts);
+    static dropInstance(opts: {name: string}) {
+        return localforage.dropInstance(opts);
     }
 
     async getItem(name: string): Promise<any> {
@@ -50,6 +50,108 @@ export class Store {
         await updateIndicator();
         return ret;
     }
+}
+
+/**
+ * An undoable store is a store with the ability to undo. Only one undoable
+ * store can exist at any time.
+ */
+export class UndoableStore extends Store {
+    constructor(localForage: LocalForage) {
+        super(localForage);
+        localForage.dropInstance({name: "undo"});
+        this.undoStore = localForage.createInstance({name: "undo"});
+        this.undos = [];
+        this.ct = 0;
+    }
+
+    /**
+     * Create an undoable store.
+     */
+    static createInstance(opts: {name: string}) {
+        return new UndoableStore(localforage.createInstance(opts));
+    }
+
+    /**
+     * Set this as an undo point (i.e., if you undo, you'll undo to here)
+     */
+    undoPoint() {
+        this.undos.push({c: "undo"});
+    }
+
+    /**
+     * Set an item and remember the undo steps.
+     */
+    async setItem(name: string, value: any): Promise<any> {
+        // Get the original value
+        const orig = await this.getItem(name);
+
+        // Make the undo
+        if (orig !== null) {
+            const ct = this.ct++;
+            await this.undoStore.setItem(ct + "", orig);
+            this.undos.push({c: "setItem", n: name, v: ct});
+        } else {
+            this.undos.push({c: "removeItem", n: name});
+        }
+
+        // Then perform the replacement
+        return await super.setItem(name, value);
+    }
+
+    /**
+     * Remove an item and remember the undo steps.
+     */
+    async removeItem(name: string) {
+        // Get the original value
+        const orig = await this.getItem(name);
+
+        // Make the undo
+        if (orig !== null) {
+            const ct = this.ct++;
+            await this.undoStore.setItem(ct + "", orig);
+            this.undos.push({c: "setItem", n: name, v: ct});
+        }
+
+        // Then remove it
+        return await super.removeItem(name);
+    }
+
+    /**
+     * Perform an undo.
+     */
+    async undo() {
+        let undo: any;
+        while (undo = this.undos.pop()) {
+            if (undo.c === "undo") {
+                // An undo point, we're done
+                break;
+
+            } else if (undo.c === "setItem") {
+                const val = await this.undoStore.getItem(undo.v + "");
+                await super.setItem(undo.n, val);
+
+            } else if (undo.c === "removeItem") {
+                await super.removeItem(undo.n);
+
+            }
+        }
+    }
+
+    /**
+     * Store for undo values.
+     */
+    undoStore: LocalForage;
+
+    /**
+     * The undo steps themselves.
+     */
+    undos: any[];
+
+    /**
+     * A counter for unique undo "names".
+     */
+    ct: number;
 }
 
 /**

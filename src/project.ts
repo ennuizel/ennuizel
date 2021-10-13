@@ -38,9 +38,14 @@ export class Project {
      * @param opts  Other options.
      */
     constructor(public id: string, opts: {
-        name?: string
+        name?: string,
+        store?: store.UndoableStore
     } = {}) {
-        this.store = store.store.createInstance({name: "ez-project-" + id});
+        if (opts.store) {
+            this.store = opts.store;
+        } else {
+            this.store = store.UndoableStore.createInstance({name: "ez-project-" + id});
+        }
         this.name = opts.name || "";
         this.tracks = [];
     }
@@ -53,7 +58,7 @@ export class Project {
         deep?: boolean
     } = {}) {
         // Save the project itself
-        await store.store.setItem("ez-project-" + this.id, {
+        await this.store.setItem("project-" + this.id, {
             name: this.name,
             tracks: this.tracks.map(t => t.id)
         });
@@ -71,7 +76,7 @@ export class Project {
      */
     async load() {
         // Load the main info
-        const p: any = await store.store.getItem("ez-project-" + this.id);
+        const p: any = await this.store.getItem("project-" + this.id);
         if (!p) return;
         this.name = p.name;
 
@@ -150,7 +155,7 @@ export class Project {
     /**
      * Data *within* this project is stored within its own store.
      */
-    store: store.Store;
+    store: store.UndoableStore;
 
     /**
      * Name of the project.
@@ -175,6 +180,7 @@ export let project: Project = null;
  */
 export async function load() {
     ui.ui.menu.project.onclick = projectMenu;
+    ui.ui.menu.undo.onclick = performUndo;
     ui.ui.menu.tracks.onclick = tracksMenu;
     await unloadProject();
 }
@@ -288,6 +294,7 @@ async function newProject(name: string) {
     // Create this project
     project = new Project(await id36.genFresh(store.store, "ez-project-"));
     const id = project.id;
+    await store.store.setItem("ez-project-" + id, true);
     project.name = name;
     await project.save();
 
@@ -333,17 +340,20 @@ function uiLoadProject(d?: ui.Dialog) {
  * Load a project by ID.
  * @param id  ID of the project.
  */
-async function loadProject(id: string) {
+async function loadProject(id: string, store?: store.UndoableStore) {
     await unloadProject();
 
     // Create and load this project
-    project = new Project(id);
+    project = new Project(id, {store});
     await project.load();
 
-    // Free up the tracks button
+    // Free up the buttons
     const tracks = ui.ui.menu.tracks;
     tracks.classList.remove("off");
     tracks.disabled = false;
+    const undo = ui.ui.menu.undo;
+    undo.classList.remove("off");
+    undo.disabled = false;
 
     return project;
 }
@@ -366,6 +376,30 @@ async function unloadProject() {
     const tracks = ui.ui.menu.tracks;
     tracks.classList.add("off");
     tracks.disabled = true;
+    const undo = ui.ui.menu.undo;
+    undo.classList.add("off");
+    undo.disabled = true;
+}
+
+/**
+ * Reload the current project. Useful for undos.
+ */
+async function reloadProject() {
+    const id = project.id;
+    const store = project.store;
+    project = null;
+    await unloadProject();
+    await loadProject(id, store);
+}
+
+/**
+ * Perform an undo.
+ */
+async function performUndo() {
+    await ui.loading(async function(d) {
+        await project.store.undo();
+        await reloadProject();
+    });
 }
 
 /**
@@ -395,6 +429,10 @@ function uiLoadFile(d: ui.Dialog) {
                 return;
 
             await ui.loading(async function(ld) {
+                // Make sure we can undo
+                project.store.undoPoint();
+
+                // Load it, expecting failure
                 try {
                     await loadFile(file.files[0].name, file.files[0], {
                         status(cur, duration) {
@@ -411,6 +449,7 @@ function uiLoadFile(d: ui.Dialog) {
                         await ui.alert(ex.stack);
                     else
                         await ui.alert(ex + "");
+                    await performUndo();
                 }
             }, {
                 reuse: d
@@ -665,9 +704,9 @@ function uiDeleteProject(d: ui.Dialog) {
  */
 async function deleteProject() {
     // First drop the store
-    await store.store.dropInstance({name: "ez-project-" + project.id});
+    await store.Store.dropInstance({name: "ez-project-" + project.id});
 
-    // Then drop the project metadata
+    // Then drop the ref in the main store
     await store.store.removeItem("ez-project-" + project.id);
 
     // Then drop it from the projects list
