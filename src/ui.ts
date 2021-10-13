@@ -37,7 +37,10 @@ export const ui = {
     // Main project space
     main: <HTMLElement> null,
 
-    // Closers for dialogs
+    // All dialogs
+    dialogs: <Dialog[]> [],
+
+    // Closeable dialogs
     closeable: <Dialog[]> [],
 
     // Zoomability
@@ -151,12 +154,18 @@ export async function dialog<T>(callback: (x:Dialog) => Promise<T>,
 
     }
 
-    // Remove any previous closeability metadata
+    // Remove any previous metadata
     if (opts.reuse) {
+        const dIdx = ui.dialogs.indexOf(d);
+        if (dIdx >= 0)
+            ui.dialogs.splice(dIdx, 1);
         const clIdx = ui.closeable.indexOf(d);
         if (clIdx >= 0)
             ui.closeable.splice(clIdx, 1);
     }
+
+    // Remember it
+    ui.dialogs.push(d);
 
     // Make it closeable, if applicable
     if (opts.closeable) {
@@ -172,9 +181,12 @@ export async function dialog<T>(callback: (x:Dialog) => Promise<T>,
     /* Close it (closeable things are assumed to be kept open and closed by the
      * user) */
     if ((!opts.closeable && !opts.keepOpen) || opts.forceClose) {
-        const idx = ui.closeable.indexOf(d);
-        if (idx >= 0)
-            ui.closeable.splice(idx, 1);
+        const dIdx = ui.dialogs.indexOf(d);
+        if (dIdx >= 0)
+            ui.dialogs.splice(dIdx, 1);
+        const cIdx = ui.closeable.indexOf(d);
+        if (cIdx >= 0)
+            ui.closeable.splice(cIdx, 1);
         try {
             document.body.removeChild(d.layerSeparator);
             document.body.removeChild(d.wrapper);
@@ -194,8 +206,8 @@ export async function dialogClose(d: Dialog) {
 // Handle closing with escape
 document.body.addEventListener("keydown", ev => {
     if (ev.key === "Escape" && ui.closeable.length) {
-        dialogClose(ui.closeable.pop());
         ev.preventDefault();
+        dialogClose(ui.closeable.pop());
     }
 });
 

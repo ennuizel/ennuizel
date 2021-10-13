@@ -866,8 +866,13 @@ export async function play() {
     });
 }
 
+// Project-level hotkeys
 window.addEventListener("keydown", async function(ev) {
     if (!project)
+        return;
+
+    // No hotkeys if dialogs are up
+    if (ui.ui.dialogs.length)
         return;
 
     if (ev.key === " ") {
@@ -884,5 +889,11 @@ window.addEventListener("keydown", async function(ev) {
             stopPlayback();
         else
             await play();
+
+    } else if (ev.key === "z" && ev.ctrlKey) {
+        // Undo
+        ev.preventDefault();
+        performUndo();
+
     }
 });
