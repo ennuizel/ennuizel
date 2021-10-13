@@ -18,6 +18,7 @@
   "homepage": "https://github.com/Yahweasel/ennuizel#readme",
   "dependencies": {
     "browserify": "^17.0.0",
+    "bytes": "^3.1.0",
     "localforage": "^1.10.0",
     "tinyify": "^3.0.0",
     "tsify": "^5.0.4",

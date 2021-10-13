@@ -17,6 +17,8 @@
 import * as status from "./status";
 import * as ui from "./ui";
 
+import * as bytes from "bytes";
+
 import type * as localforageT from "localforage";
 type LocalForage = typeof localforageT;
 declare let localforage : LocalForage;
@@ -182,6 +184,8 @@ async function updateIndicator() {
 
     const estimate = await navigator.storage.estimate();
     status.pushStatus("storage",
-        "Storage: " + Math.round(estimate.usage / estimate.quota * 100) + "%"
+        "Storage: " + Math.round(estimate.usage / estimate.quota * 100) + "% (" +
+        bytes(estimate.usage) + "/" +
+        bytes(estimate.quota) + ")"
     );
 }
