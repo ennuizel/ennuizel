@@ -752,7 +752,8 @@ function uiDeleteProject(d: ui.Dialog) {
  * Delete a project.
  */
 async function deleteProject() {
-    // First drop the store
+    // First drop the stores
+    await project.store.dropUndo();
     await store.Store.dropInstance({name: "ez-project-" + project.id});
 
     // Then drop the ref in the main store
