@@ -274,14 +274,14 @@ async function updateDisplay() {
         const selectingRange = (selectStart !== selectEnd);
         const startPx = Math.max(
             Math.floor(selectStart * ui.pixelsPerSecond * ui.ui.zoom - scrollLeft),
-            0
+            -2
         );
         const endPx = Math.min(
             Math.max(
                 Math.ceil(selectEnd * ui.pixelsPerSecond * ui.ui.zoom - scrollLeft),
                 startPx + 1
             ),
-            width
+            width + 2
         );
         const playHeadPx = (playHead === null) ? null : Math.round(
             playHead * ui.pixelsPerSecond * ui.ui.zoom - scrollLeft
