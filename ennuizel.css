@@ -265,6 +265,7 @@ input[type="checkbox"]:checked:after {
     display: inline-block;
     position: sticky;
     left: 0px;
+    z-index: 1;
     box-sizing: border-box;
     height: 128px;
     width: 128px;
