@@ -181,7 +181,7 @@ export let project: Project = null;
  */
 export async function load() {
     ui.ui.menu.project.onclick = projectMenu;
-    ui.ui.menu.undo.onclick = performUndo;
+    ui.ui.menu.edit.onclick = editMenu;
     ui.ui.menu.tracks.onclick = tracksMenu;
     await unloadProject();
 }
@@ -352,9 +352,9 @@ async function loadProject(id: string, store?: store.UndoableStore) {
     const tracks = ui.ui.menu.tracks;
     tracks.classList.remove("off");
     tracks.disabled = false;
-    const undo = ui.ui.menu.undo;
-    undo.classList.remove("off");
-    undo.disabled = false;
+    const edit = ui.ui.menu.edit;
+    edit.classList.remove("off");
+    edit.disabled = false;
 
     return project;
 }
@@ -382,9 +382,9 @@ async function unloadProject() {
     const tracks = ui.ui.menu.tracks;
     tracks.classList.add("off");
     tracks.disabled = true;
-    const undo = ui.ui.menu.undo;
-    undo.classList.add("off");
-    undo.disabled = true;
+    const edit = ui.ui.menu.edit;
+    edit.classList.add("off");
+    edit.disabled = true;
 }
 
 /**
@@ -396,6 +396,30 @@ async function reloadProject() {
     project = null;
     await unloadProject();
     await loadProject(id, store);
+}
+
+/**
+ * Show the edit menu.
+ */
+function editMenu() {
+    ui.dialog(async function(d) {
+        const undo = ui.btn(d.box, "Undo (Ctrl+Z)", {className: "row"});
+        undo.focus();
+        const selAll = ui.btn(d.box, "Select all (Ctrl+A)", {className: "row"});
+
+        undo.onclick = async function() {
+            await performUndo();
+            ui.dialogClose(d);
+        };
+
+        selAll.onclick = async function() {
+            await select.selectAll();
+            ui.dialogClose(d);
+        };
+
+    }, {
+        closeable: true
+    });
 }
 
 /**

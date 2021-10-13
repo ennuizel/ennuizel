@@ -26,7 +26,7 @@ export const ui = {
     // Main menu
     menu: {
         project: <HTMLButtonElement> null,
-        undo: <HTMLButtonElement> null,
+        edit: <HTMLButtonElement> null,
         tracks: <HTMLButtonElement> null,
         filters: <HTMLButtonElement> null
     },
@@ -70,7 +70,7 @@ export function load() {
     // And export it
     ui.menu = {
         project: gebi("b-project"),
-        undo: gebi("b-undo"),
+        edit: gebi("b-edit"),
         tracks: gebi("b-tracks"),
         filters: gebi("b-filters")
     };

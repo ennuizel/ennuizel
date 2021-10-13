@@ -151,31 +151,6 @@ document.body.addEventListener("mouseup", ev => {
         selectAnchor = null;
 });
 
-// Home and end should set the start and end times
-document.body.addEventListener("keydown", async function(ev) {
-    if (selectAnchor !== null)
-        return;
-
-    if (ev.key === "Home") {
-        ev.preventDefault();
-        selectStart = selectEnd = 0;
-        updateDisplay();
-
-    } else if (ev.key === "End") {
-        ev.preventDefault();
-        selectStart = selectEnd = maxDuration();
-        updateDisplay();
-
-    } else if (ev.key === "a" && ev.ctrlKey) {
-        ev.preventDefault();
-        selectEnd = selectStart;
-        for (const sel of selectables)
-            selectedEls.add(sel);
-        updateDisplay();
-
-    }
-});
-
 /**
  * Remove a selectable, based on the underlying track.
  * @param track  Track to remove.
@@ -218,6 +193,16 @@ export function getSelection(): Selection {
         end: selectEnd,
         els: new Set(selectedEls)
     };
+}
+
+/**
+ * Select all selectables, and clear the range so that everything is selected.
+ */
+export async function selectAll() {
+    selectEnd = selectStart;
+    for (const sel of selectables)
+        selectedEls.add(sel);
+    await updateDisplay();
 }
 
 /**
@@ -325,6 +310,28 @@ async function updateDisplay() {
 
     await selPromise;
 }
+
+// Selection hotkeys
+document.body.addEventListener("keydown", async function(ev) {
+    if (selectAnchor !== null)
+        return;
+
+    if (ev.key === "Home") {
+        ev.preventDefault();
+        selectStart = selectEnd = 0;
+        updateDisplay();
+
+    } else if (ev.key === "End") {
+        ev.preventDefault();
+        selectStart = selectEnd = maxDuration();
+        updateDisplay();
+
+    } else if (ev.key === "a" && ev.ctrlKey) {
+        ev.preventDefault();
+        selectAll();
+
+    }
+});
 
 /**
  * Loader for selection. Just makes sure the graphics are updated when we scroll.
