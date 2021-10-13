@@ -19,6 +19,7 @@ declare let LibAV: any;
 
 import * as audio from "./audio";
 import * as audioData from "./audio-data";
+import * as hotkeys from "./hotkeys";
 import * as id36 from "./id36";
 import * as select from "./select";
 import * as store from "./store";
@@ -118,8 +119,10 @@ export class Project {
         del.onclick = function() {
             ui.dialog(async function(d, show) {
                 ui.mk("div", d.box, {innerHTML: "Are you sure?<br/><br/>"});
-                const yes = ui.btn(d.box, "Yes, delete this track", {className: "row"});
-                const no = ui.btn(d.box, "No, cancel", {className: "row"});
+                const yes = ui.btn(d.box, "<u>Y</u>es, delete this track", {className: "row"});
+                hotkeys.registerHotkey(yes, d, "y");
+                const no = ui.btn(d.box, "<u>N</u>o, cancel", {className: "row"});
+                hotkeys.registerHotkey(no, d, "n");
 
                 no.onclick = () => {
                     ui.dialogClose(d);
@@ -182,9 +185,13 @@ export let project: Project = null;
  * Load project-related behavior and UI.
  */
 export async function load() {
-    ui.ui.menu.project.onclick = projectMenu;
-    ui.ui.menu.edit.onclick = editMenu;
-    ui.ui.menu.tracks.onclick = tracksMenu;
+    const menu = ui.ui.menu;
+    menu.project.onclick = projectMenu;
+    hotkeys.registerHotkey(menu.project, null, "p");
+    menu.edit.onclick = editMenu;
+    hotkeys.registerHotkey(menu.edit, null, "e");
+    menu.tracks.onclick = tracksMenu;
+    hotkeys.registerHotkey(menu.tracks, null, "t");
     await unloadProject();
 }
 
@@ -207,18 +214,21 @@ async function getProjects() {
  */
 function projectMenu() {
     ui.dialog(async function(d, show) {
-        const newb = ui.btn(d.box, "New project", {className: "row"});
+        const newb = ui.btn(d.box, "<u>N</u>ew project", {className: "row"});
+        hotkeys.registerHotkey(newb, d, "n");
         newb.onclick = () => uiNewProject(d);
 
         // Show the load projects button if there are any to load
         if ((await getProjects()).length) {
-            const loadb = ui.btn(d.box, "Load project", {className: "row"});
+            const loadb = ui.btn(d.box, "<u>L</u>oad project", {className: "row"});
+            hotkeys.registerHotkey(loadb, d, "l");
             loadb.onclick = () => uiLoadProject(d);
         }
 
         // Only shown if there's a current project
         if (project) {
-            const deleteb = ui.btn(d.box, "Delete project", {className: "row"});
+            const deleteb = ui.btn(d.box, "<u>D</u>elete project", {className: "row"});
+            hotkeys.registerHotkey(deleteb, d, "d");
             deleteb.onclick = () => uiDeleteProject(d);
         }
 
@@ -235,7 +245,8 @@ function uiNewProject(d: ui.Dialog) {
     ui.dialog(async function(d, show) {
         ui.lbl(d.box, "project-name", "Project name:&nbsp;");
         let nm = ui.txt(d.box, {id: "project-name"});
-        let neww = ui.btn(d.box, "New project");
+        let neww = ui.btn(d.box, "<u>N</u>ew project");
+        hotkeys.registerHotkey(neww, d, "n");
 
         nm.onkeydown = ev => {
             if (ev.key === "Enter") {
@@ -403,8 +414,10 @@ async function reloadProject() {
  */
 function editMenu() {
     ui.dialog(async function(d, show) {
-        const undo = ui.btn(d.box, "Undo (Ctrl+Z)", {className: "row"});
-        const selAll = ui.btn(d.box, "Select all (Ctrl+A)", {className: "row"});
+        const undo = ui.btn(d.box, "<u>U</u>ndo (Ctrl+Z)", {className: "row"});
+        hotkeys.registerHotkey(undo, d, "u");
+        const selAll = ui.btn(d.box, "Select <u>a</u>ll (Ctrl+A)", {className: "row"});
+        hotkeys.registerHotkey(selAll, d, "a");
 
         undo.onclick = async function() {
             await performUndo();
@@ -438,7 +451,8 @@ async function performUndo() {
  */
 function tracksMenu() {
     ui.dialog(async function(d, show) {
-        const load = ui.btn(d.box, "Load track(s) from file", {className: "row"});
+        const load = ui.btn(d.box, "<u>L</u>oad track(s) from file", {className: "row"});
+        hotkeys.registerHotkey(load, d, "l");
         load.onclick = () => uiLoadFile(d);
         show(load);
     }, {
@@ -710,8 +724,10 @@ async function loadFile(fileName: string, raw: Blob, opts: {
 function uiDeleteProject(d: ui.Dialog) {
     ui.dialog(async function(d, show) {
         ui.mk("div", d.box, {innerHTML: "Are you sure? This will delete project data in the browser (but will not delete any saved files or data on any servers).<br/><br/>"});
-        const yesb = ui.btn(d.box, "Yes, delete the project", {className: "row"});
-        const nob = ui.btn(d.box, "No, cancel", {className: "row"});
+        const yesb = ui.btn(d.box, "<u>Y</u>es, delete the project", {className: "row"});
+        hotkeys.registerHotkey(yesb, d, "y");
+        const nob = ui.btn(d.box, "<u>N</u>o, cancel", {className: "row"});
+        hotkeys.registerHotkey(nob, d, "n");
 
         show(nob);
 
