@@ -24,20 +24,27 @@ import * as project from "./project";
 import * as select from "./select";
 import * as store from "./store";
 
+import * as streamsaver from "streamsaver";
+import { WritableStream } from "web-streams-polyfill/ponyfill";
+
 (async function() {
     ui.load();
     await ui.loading(async function(d) {
         // Load our core libraries
-
-        // localforage
-        if (typeof localforage === "undefined")
-            await ui.loadLibrary("localforage.min.js");
 
         // libav.js
         if (typeof LibAV === "undefined") {
             LibAV = {base: "libav/"};
             await ui.loadLibrary("libav/libav-2.4.4.4-fat.js");
         }
+
+        // localforage
+        if (typeof localforage === "undefined")
+            await ui.loadLibrary("localforage.min.js");
+
+        // StreamSaver.js
+        streamsaver.mitm = "StreamSaver/mitm.html";
+        streamsaver.WritableStream = WritableStream;
 
         /* The technique to get persistence (which also implies larger/no
          * quota) is complicated. On Firefox, if you request persitence, it
