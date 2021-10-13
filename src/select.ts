@@ -94,6 +94,8 @@ export async function addSelectable(sel: Selectable) {
 
     // Make sure it actually is selectable
     c.addEventListener("mousedown", ev => {
+        ev.preventDefault();
+
         const x = ev.offsetX + ui.ui.main.scrollLeft;
         selectStart = selectEnd = selectAnchorTime =
             x / (ui.pixelsPerSecond * ui.ui.zoom);
@@ -107,6 +109,8 @@ export async function addSelectable(sel: Selectable) {
     c.addEventListener("mousemove", ev => {
         if (selectAnchor === null)
             return;
+
+        ev.preventDefault();
 
         const x = ev.offsetX + ui.ui.main.scrollLeft;
 
@@ -152,10 +156,12 @@ document.body.addEventListener("keydown", async function(ev) {
         return;
 
     if (ev.key === "Home") {
+        ev.preventDefault();
         selectStart = selectEnd = 0;
         updateDisplay();
 
     } else if (ev.key === "End") {
+        ev.preventDefault();
         selectStart = selectEnd = maxDuration();
         updateDisplay();
 
