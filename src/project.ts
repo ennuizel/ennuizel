@@ -332,7 +332,7 @@ function uiLoadFile(d: ui.Dialog) {
 
             await ui.loading(async function(ld) {
                 try {
-                    await loadFile(file.files[0], {
+                    await loadFile(file.files[0].name, file.files[0], {
                         status(cur, duration) {
                             let txt = "Loading... " + util.timestamp(cur);
                             if (duration) {
@@ -361,10 +361,11 @@ function uiLoadFile(d: ui.Dialog) {
 
 /**
  * Load a file into tracks.
+ * @param fileName  The name of the file.
  * @param raw  The file, as a Blob.
  * @param opts  Other options.
  */
-async function loadFile(raw: Blob, opts: {
+async function loadFile(fileName: string, raw: Blob, opts: {
     status?: (loaded: number, duration: number) => unknown
 } = {}) {
     const fileReader = raw.stream().getReader();
@@ -471,11 +472,17 @@ async function loadFile(raw: Blob, opts: {
     }
 
     // Then make a track and *decoder* stream for each audio track
+    const baseName = fileName.replace(/\..*/, "");
     const audioTracks: Record<number, audioData.AudioTrack> = Object.create(null);
     const trackPromises: Promise<unknown>[] = [];
     for (const stream of audioStreams) {
         // Make a track
-        const track = new audioData.AudioTrack(await id36.genFresh(project.store, "audio-track-"), project);
+        const trackName = baseName + ((audioStreams.length <= 1) ? "" : ("-" + (stream.index+1)));
+        const track = new audioData.AudioTrack(
+            await id36.genFresh(project.store, "audio-track-"),
+            project,
+            {name: trackName}
+        );
         project.tracks.push(track);
         audioTracks[stream.index] = track;
 

@@ -129,18 +129,26 @@ export class AudioTrack {
      * @param opts  Other options.
      */
     constructor(public id: string, public project: {store: store.Store}, opts: {
-        id?: string,
+        name?: string,
         format?: number,
         sampleRate?: number,
         channels?: number
     } = {}) {
+        // Main properties
         this.root = null;
+        this.name = opts.name || "";
         this.format = opts.format || 4; // DBL
         this.sampleRate = opts.sampleRate || 48000;
         this.channels = opts.channels || 1;
 
+        // UI
         this.spacer = ui.mk("div", ui.ui.main, {className: "track-spacer"});
         this.info = ui.mk("div", ui.ui.main, {className: "track-info"});
+        this.infoName = ui.txt(this.info, {
+            className: "row",
+            value: this.name
+        });
+        this.uiSetName(this.infoName);
         this.display = ui.mk("div", ui.ui.main, {className: "track-display"});
         this.waveform = ui.mk("div", this.display, {className: "track-waveform"});
 
@@ -160,6 +168,7 @@ export class AudioTrack {
         deep?: boolean
     } = {}) {
         const t = {
+            name: this.name,
             format: this.format,
             sampleRate: this.sampleRate,
             channels: this.channels,
@@ -190,6 +199,8 @@ export class AudioTrack {
         // Load the main data
         const t: any = await this.project.store.getItem("audio-track-" + this.id);
         if (!t) return;
+        this.name = t.name || "";
+        this.infoName.value = this.name;
         this.format = t.format;
         this.sampleRate = t.sampleRate;
         this.channels = t.channels;
@@ -530,9 +541,31 @@ export class AudioTrack {
     }
 
     /**
+     * Set this box to change the name.
+     * @param inp  The input box.
+     */
+    uiSetName(inp: HTMLInputElement) {
+        let timeout: number = null;
+        inp.oninput = ev => {
+            if (timeout !== null)
+                clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                timeout = null;
+                this.name = (<HTMLInputElement> ev.target).value;
+                this.save();
+            }, 1000);
+        };
+    }
+
+    /**
      * Root of the AudioData tree.
      */
     private root: AudioData;
+
+    /**
+     * Display name for this track.
+     */
+    name: string;
 
     /**
      * Format of samples in this track, in libav format code.
@@ -558,6 +591,11 @@ export class AudioTrack {
      * UI info box.
      */
     info: HTMLElement;
+
+    /**
+     * UI name box.
+     */
+    infoName: HTMLInputElement;
 
     /**
      * UI display box.
