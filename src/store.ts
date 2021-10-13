@@ -59,8 +59,8 @@ export class Store {
 export class UndoableStore extends Store {
     constructor(localForage: LocalForage) {
         super(localForage);
-        localForage.dropInstance({name: "undo"});
-        this.undoStore = localForage.createInstance({name: "undo"});
+        localForage.dropInstance({name: "ez-undo"});
+        this.undoStore = localForage.createInstance({name: "ez-undo"});
         this.undos = [];
         this.ct = 0;
     }
@@ -77,6 +77,13 @@ export class UndoableStore extends Store {
      */
     undoPoint() {
         this.undos.push({c: "undo"});
+    }
+
+    /**
+     * Drop the undo store.
+     */
+    dropUndo() {
+        localforage.dropInstance({name: "ez-undo"});
     }
 
     /**

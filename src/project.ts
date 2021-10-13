@@ -367,6 +367,11 @@ async function unloadProject() {
     if (project) {
         // Save the project state
         await project.save({deep: true});
+
+        // Remove the undo info
+        project.store.dropUndo();
+
+        project = null;
     }
 
     // Clear out the former selections
