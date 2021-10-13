@@ -127,6 +127,7 @@ export class Project {
 
                 yes.onclick = () => {
                     ui.loading(async function(d) {
+                        await project.store.undoPoint();
                         await self.removeTrack(track);
                     }, {
                         reuse: d
