@@ -89,8 +89,7 @@ export async function addSelectable(sel: Selectable) {
         height: ui.trackHeight
     });
     selectables.push(sel);
-    if (selectedEls.size === 0)
-        selectedEls.add(sel);
+    selectedEls.add(sel);
 
     // Make sure it actually is selectable
     c.addEventListener("mousedown", ev => {
@@ -308,6 +307,12 @@ async function updateDisplay() {
                     ctx.fillRect(startPx, 0, 1, ui.trackHeight);
 
                 }
+
+            } else {
+                // Black it out
+                ctx.fillStyle = "rgba(0,0,0,0.5)";
+                ctx.fillRect(0, 0, width, ui.trackHeight);
+
             }
 
             // Also draw the play head
