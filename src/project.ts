@@ -116,11 +116,10 @@ export class Project {
         const del = ui.btn(track.info, "Delete", {className: "row small"});
 
         del.onclick = function() {
-            ui.dialog(async function(d) {
+            ui.dialog(async function(d, show) {
                 ui.mk("div", d.box, {innerHTML: "Are you sure?<br/><br/>"});
                 const yes = ui.btn(d.box, "Yes, delete this track", {className: "row"});
                 const no = ui.btn(d.box, "No, cancel", {className: "row"});
-                no.focus();
 
                 no.onclick = () => {
                     ui.dialogClose(d);
@@ -134,6 +133,8 @@ export class Project {
                         reuse: d
                     });
                 };
+
+                show(no);
             }, {
                 closeable: true
             });
@@ -205,9 +206,8 @@ async function getProjects() {
  * Show the main project menu.
  */
 function projectMenu() {
-    ui.dialog(async function(d) {
+    ui.dialog(async function(d, show) {
         const newb = ui.btn(d.box, "New project", {className: "row"});
-        newb.focus();
         newb.onclick = () => uiNewProject(d);
 
         // Show the load projects button if there are any to load
@@ -221,6 +221,8 @@ function projectMenu() {
             const deleteb = ui.btn(d.box, "Delete project", {className: "row"});
             deleteb.onclick = () => uiDeleteProject(d);
         }
+
+        show(newb);
     }, {
         closeable: true
     });
@@ -230,10 +232,9 @@ function projectMenu() {
  * Create a new project (UI).
  */
 function uiNewProject(d: ui.Dialog) {
-    ui.dialog(async function(d) {
+    ui.dialog(async function(d, show) {
         ui.lbl(d.box, "project-name", "Project name:&nbsp;");
         let nm = ui.txt(d.box, {id: "project-name"});
-        nm.focus();
         let neww = ui.btn(d.box, "New project");
 
         nm.onkeydown = ev => {
@@ -247,6 +248,8 @@ function uiNewProject(d: ui.Dialog) {
         neww.onclick = ev => {
             doIt();
         };
+
+        show(nm);
 
         async function doIt() {
             if (nm.value.trim() === "") {
@@ -314,16 +317,14 @@ async function newProject(name: string) {
  * Load a project (UI).
  */
 function uiLoadProject(d?: ui.Dialog) {
-    ui.dialog(async function(d) {
+    ui.dialog(async function(d, show) {
         const projects = await getProjects();
-        let first = true;
+        let first: HTMLElement = null;
 
         for (const project of projects) (function(project) {
             const btn = ui.btn(d.box, project.name, {className: "row nouppercase"});
-            if (first) {
-                btn.focus();
-                first = false;
-            }
+            if (!first)
+                first = btn;
             btn.onclick = async function() {
                 await ui.loading(async function(ld) {
                     await loadProject(project.id);
@@ -332,6 +333,8 @@ function uiLoadProject(d?: ui.Dialog) {
                 });
             };
         })(project);
+
+        show(first);
     }, {
         reuse: d,
         closeable: true
@@ -403,9 +406,8 @@ async function reloadProject() {
  * Show the edit menu.
  */
 function editMenu() {
-    ui.dialog(async function(d) {
+    ui.dialog(async function(d, show) {
         const undo = ui.btn(d.box, "Undo (Ctrl+Z)", {className: "row"});
-        undo.focus();
         const selAll = ui.btn(d.box, "Select all (Ctrl+A)", {className: "row"});
 
         undo.onclick = async function() {
@@ -417,6 +419,8 @@ function editMenu() {
             await select.selectAll();
             ui.dialogClose(d);
         };
+
+        show(undo);
 
     }, {
         closeable: true
@@ -437,10 +441,10 @@ async function performUndo() {
  * Show the "tracks" menu.
  */
 function tracksMenu() {
-    ui.dialog(async function(d) {
+    ui.dialog(async function(d, show) {
         const load = ui.btn(d.box, "Load track(s) from file", {className: "row"});
-        load.focus();
         load.onclick = () => uiLoadFile(d);
+        show(load);
     }, {
         closeable: true
     });
@@ -450,10 +454,9 @@ function tracksMenu() {
  * Load a file into tracks (UI).
  */
 function uiLoadFile(d: ui.Dialog) {
-    ui.dialog(async function(d) {
+    ui.dialog(async function(d, show) {
         const lbl = ui.lbl(d.box, "load-file", "Audio file:&nbsp;");
         const file = ui.mk("input", d.box, {id: "load-file", type: "file"});
-        file.focus();
 
         file.onchange = async function() {
             if (!file.files.length)
@@ -486,6 +489,8 @@ function uiLoadFile(d: ui.Dialog) {
                 reuse: d
             });
         };
+
+        show(file);
 
     }, {
         reuse: d,
@@ -707,11 +712,12 @@ async function loadFile(fileName: string, raw: Blob, opts: {
  * Delete a project (UI).
  */
 function uiDeleteProject(d: ui.Dialog) {
-    ui.dialog(async function(d) {
+    ui.dialog(async function(d, show) {
         ui.mk("div", d.box, {innerHTML: "Are you sure? This will delete project data in the browser (but will not delete any saved files or data on any servers).<br/><br/>"});
         const yesb = ui.btn(d.box, "Yes, delete the project", {className: "row"});
         const nob = ui.btn(d.box, "No, cancel", {className: "row"});
-        nob.focus();
+
+        show(nob);
 
         const yes = await new Promise(res => {
             yesb.onclick = () => res(true);

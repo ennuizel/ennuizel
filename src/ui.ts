@@ -131,7 +131,8 @@ export interface DialogOptions {
  * @param callback  Function to call with the dialog box.
  * @param opts  Other options.
  */
-export async function dialog<T>(callback: (x:Dialog) => Promise<T>,
+export async function dialog<T>(callback:
+    (x:Dialog,y:(x:HTMLElement)=>unknown) => Promise<T>,
     opts: DialogOptions = {}): Promise<T> {
 
     /* Create the parts. There's a layer separator, then some deeply nested
@@ -139,6 +140,7 @@ export async function dialog<T>(callback: (x:Dialog) => Promise<T>,
     let d: Dialog;
     if (opts.reuse) {
         d = opts.reuse;
+        d.wrapper.style.display = "none";
         d.box.innerHTML = "";
 
     } else {
@@ -176,7 +178,11 @@ export async function dialog<T>(callback: (x:Dialog) => Promise<T>,
     }
 
     // Let the callback do its things
-    let ret = await callback(d);
+    let ret = await callback(d, (focus) => {
+        d.wrapper.style.display = "flex";
+        if (focus)
+            focus.focus();
+    });
 
     /* Close it (closeable things are assumed to be kept open and closed by the
      * user) */
@@ -217,8 +223,9 @@ document.body.addEventListener("keydown", ev => {
 export function loading<T>(callback: (x:Dialog) => Promise<T>,
     opts: DialogOptions = {}): Promise<T> {
 
-    return dialog(async function(d) {
+    return dialog(async function(d, show) {
         d.box.innerText = "Loading...";
+        show(null);
         return await callback(d);
     }, Object.assign({
         closeable: false
@@ -230,10 +237,10 @@ export function loading<T>(callback: (x:Dialog) => Promise<T>,
  * @param html  innerHTML of the dialog.
  */
 export async function alert(html: string) {
-    await dialog(async function(d) {
+    await dialog(async function(d, show) {
         mk("div", d.box, {innerHTML: html + "<br/><br/>"});
         const ok = btn(d.box, "OK", {className: "row"});
-        ok.focus();
+        show(ok);
         await new Promise(res => ok.onclick = res);
     });
 }

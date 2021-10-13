@@ -81,9 +81,10 @@ import * as store from "./store";
             .replace(/</g, "&lt;").replace(/>/g, "&gt;")
             .replace(/\n/g, "<br/>");
 
-        ui.dialog(async function(d) {
+        ui.dialog(async function(d, show) {
             errorDialog = d;
             d.box.innerHTML = html;
+            show(null);
         }, {
             reuse: errorDialog,
             closeable: false,
