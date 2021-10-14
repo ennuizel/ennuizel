@@ -323,7 +323,17 @@ export class AudioTrack {
     duration() {
         if (!this.root)
             return 0;
-        return this.root.subtreeDuration() / this.channels / this.sampleRate;
+        return this.sampleCount() / this.channels / this.sampleRate;
+    }
+
+    /**
+     * Get the number of samples in this track. This is, in essence, the
+     * duration in samples times the number of channels.
+     */
+    sampleCount() {
+        if (!this.root)
+            return 0;
+        return this.root.subtreeDuration();
     }
 
     /**
