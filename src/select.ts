@@ -16,6 +16,7 @@
 
 // Components related to selecting parts of a track
 
+import * as track from "./track";
 import * as ui from "./ui";
 
 /**
@@ -25,7 +26,7 @@ export interface Selectable {
     /**
      * The underlying track.
      */
-    track: any;
+    track: track.Track;
 
     /**
      * The <div> over which a selection box can be overlain.

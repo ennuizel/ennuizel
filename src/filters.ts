@@ -20,6 +20,7 @@ declare let LibAV: any;
 import * as audioData from "./audio-data";
 import * as avthreads from "./avthreads";
 import * as select from "./select";
+import * as track from "./track";
 import * as ui from "./ui";
 
 import { ReadableStream } from "web-streams-polyfill/ponyfill";
@@ -138,8 +139,10 @@ export async function ffmpegFilter(
         return;
     }
 
-    // Get the tracks
-    const tracks = Array.from(sel.els).map(x => <audioData.AudioTrack> x.track);
+    // Get the audio tracks
+    const tracks = <audioData.AudioTrack[]> Array.from(sel.els)
+        .map(x => x.track)
+        .filter(x => x.type() === track.TrackType.Audio);
 
     if (d)
         d.box.innerHTML = "Filtering...";
