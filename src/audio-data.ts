@@ -21,6 +21,7 @@ import * as avthreads from "./avthreads";
 import * as id36 from "./id36";
 import * as select from "./select";
 import * as store from "./store";
+import * as track from "./track";
 import { EZStream, ezStreamFrom } from "./stream";
 import * as ui from "./ui";
 
@@ -119,7 +120,7 @@ export async function fromPlanar(format: number): Promise<number> {
  * codes), sample rate, and number of channels. AudioTracks are stored as
  * audio-track-id.
  */
-export class AudioTrack {
+export class AudioTrack implements track.Track {
     /**
      * Make an AudioTrack.
      * @param id  ID for this track. Must be unique in the store.
@@ -153,6 +154,11 @@ export class AudioTrack {
             duration: this.duration.bind(this)
         });
     }
+
+    /**
+     * AudioTracks are track type Audio.
+     */
+    type() { return track.TrackType.Audio; }
 
     /**
      * Save this track to the store.

@@ -23,6 +23,7 @@ import * as hotkeys from "./hotkeys";
 import * as id36 from "./id36";
 import * as select from "./select";
 import * as store from "./store";
+import * as track from "./track";
 import { EZStream } from "./stream";
 import * as ui from "./ui";
 import * as util from "./util";
@@ -61,7 +62,7 @@ export class Project {
         // Save the project itself
         await this.store.setItem("project-" + this.id, {
             name: this.name,
-            tracks: this.tracks.map(t => t.id)
+            tracks: this.tracks.map(t => [t.type(), t.id])
         });
 
         // Save the tracks
@@ -82,7 +83,7 @@ export class Project {
         this.name = p.name;
 
         this.tracks = [];
-        for (const trackId of p.tracks) {
+        for (const [trackType, trackId] of p.tracks) {
             const track = new audioData.AudioTrack(trackId, this);
             await track.load();
             this.addTrack(track);
@@ -90,10 +91,10 @@ export class Project {
     }
 
     /**
-     * Create a new track and add it.
+     * Create a new audio track and add it.
      * @param opts  Options for creating the track.
      */
-    async newTrack(opts: {name?: string} = {}) {
+    async newAudioTrack(opts: {name?: string} = {}) {
         const track = new audioData.AudioTrack(
             await id36.genFresh(this.store, "audio-track-"),
             this, opts
@@ -106,7 +107,7 @@ export class Project {
      * Add a track that's already been created.
      * @param track  The track to add.
      */
-    async addTrack(track: Track) {
+    async addTrack(track: track.Track) {
         const self = this;
 
         // Set up its info box
@@ -161,7 +162,7 @@ export class Project {
     /**
      * Remove a track.
      */
-    async removeTrack(track: Track) {
+    async removeTrack(track: track.Track) {
         await track.del();
         const idx = this.tracks.indexOf(track);
         if (idx >= 0)
@@ -182,10 +183,8 @@ export class Project {
     /**
      * Tracks in this project.
      */
-    tracks: Track[];
+    tracks: track.Track[];
 }
-
-export type Track = audioData.AudioTrack;
 
 /**
  * The current project, if there is one.
@@ -630,7 +629,7 @@ async function loadFile(fileName: string, raw: Blob, opts: {
     for (const stream of audioStreams) {
         // Make a track
         const trackName = baseName + ((audioStreams.length <= 1) ? "" : ("-" + (stream.index+1)));
-        const track = await project.newTrack({name: trackName});
+        const track = await project.newAudioTrack({name: trackName});
         audioTracks[stream.index] = track;
 
         // Make the decoder
@@ -794,10 +793,14 @@ export async function play() {
         if (sel.range)
             streamOpts.end = sel.end;
 
+        // Get only the audio tracks
+        const audioTracks = <audioData.AudioTrack[]>
+            project.tracks.filter(x => x.type() === track.TrackType.Audio);
+
         // Find the longest track to be the play head sentinel
         let longest: audioData.AudioTrack = null;
         let longestLen = 0;
-        for (const track of project.tracks) {
+        for (const track of audioTracks) {
             const dur = track.duration();
             if (dur > longestLen) {
                 longest = track;
@@ -807,7 +810,7 @@ export async function play() {
 
         // Now make all the streams
         const streams = await Promise.all(
-            project.tracks.map(x => x.stream(streamOpts))
+            audioTracks.map(x => x.stream(streamOpts))
         );
 
         // How many are currently ready to play?
@@ -821,7 +824,7 @@ export async function play() {
         // Convert them to sources
         const sourcePromises: Promise<any>[] = [];
         for (let i = 0; i < streams.length; i++) {
-            const track = project.tracks[i];
+            const track = audioTracks[i];
             const stream = streams[i];
 
             // Callbacks
