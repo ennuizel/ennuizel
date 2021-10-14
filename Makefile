@@ -1,3 +1,5 @@
+PREFIX=inst
+
 all: \
 	localforage.min.js StreamSaver/mitm.html StreamSaver/sw.js \
 	ennuizel.js awp/ennuizel-player.js
@@ -25,6 +27,14 @@ StreamSaver/sw.js: node_modules/.bin/browserify
 
 node_modules/.bin/browserify:
 	npm install
+
+install:
+	mkdir -p $(PREFIX)/awp $(PREFIX)/StreamSaver
+	for i in index.html localforage.min.js \
+		StreamSaver/mitm.html StreamSaver/sw.js \
+		ennuizel.js awp/ennuizel-player.js ; do \
+		install -m 0622 $$i $(PREFIX)/$$i; \
+	done
 
 clean:
 	rm -f localforage.min.js
