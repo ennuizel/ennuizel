@@ -503,9 +503,10 @@ export class AudioTrack {
                 if (curIn.done) {
                     // End of input
                     if (curOutNode) {
-                        curOutNode.closeRaw(true);
+                        await curOutNode.closeRaw(true);
                         if (opts.closeTwice)
-                            curOutNode.closeRaw();
+                            await curOutNode.closeRaw();
+                        await curOutNode.save();
                         curOutNode = curOutRaw = null;
                     }
                     break;
@@ -544,9 +545,10 @@ export class AudioTrack {
 
             // Close our output
             if (curOutRem === 0) {
-                curOutNode.closeRaw(true);
+                await curOutNode.closeRaw(true);
                 if (opts.closeTwice)
-                    curOutNode.closeRaw();
+                    await curOutNode.closeRaw();
+                await curOutNode.save();
                 curOutNode = null;
             }
         }
@@ -557,9 +559,9 @@ export class AudioTrack {
             if (curOut.done)
                 break;
             curOutNode = curOut.value.node;
-            curOutNode.closeRaw();
+            await curOutNode.closeRaw();
             if (opts.closeTwice)
-                curOutNode.closeRaw();
+                await curOutNode.closeRaw();
         }
 
         while (true) {
