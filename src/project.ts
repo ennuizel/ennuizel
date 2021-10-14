@@ -387,8 +387,7 @@ async function loadProject(id: string, store?: store.UndoableStore) {
 async function unloadProject() {
     if (project) {
         // Remove the undo info
-        project.store.dropUndo();
-
+        await project.store.dropUndo();
         project = null;
     }
 
@@ -751,7 +750,7 @@ function uiDeleteProject(d: ui.Dialog) {
 async function deleteProject() {
     // First drop the stores
     await project.store.dropUndo();
-    await store.Store.dropInstance({name: "ez-project-" + project.id});
+    await project.store.dropInstance({name: "ez-project-" + project.id});
 
     // Then drop the ref in the main store
     await store.store.removeItem("ez-project-" + project.id);

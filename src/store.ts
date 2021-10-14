@@ -23,6 +23,9 @@ import type * as localforageT from "localforage";
 type LocalForage = typeof localforageT;
 declare let localforage : LocalForage;
 
+// We don't support undo if our local storage utilization is too high
+let noUndo = false;
+
 /**
  * For now, an Ennuizel store is just LocalForage, but eventually it will wrap
  * it with other things.
@@ -34,8 +37,9 @@ export class Store {
         return new Store(localforage.createInstance(opts));
     }
 
-    static dropInstance(opts: {name: string}) {
-        return localforage.dropInstance(opts);
+    async dropInstance(opts: {name: string}) {
+        await this.localForage.dropInstance(opts);
+        await updateIndicator();
     }
 
     async getItem(name: string): Promise<any> {
@@ -62,8 +66,13 @@ export class Store {
 export class UndoableStore extends Store {
     constructor(localForage: LocalForage) {
         super(localForage);
-        localForage.dropInstance({name: "ez-undo"});
-        this.undoStore = localForage.createInstance({name: "ez-undo"});
+        const self = this;
+        this.undoStore = null;
+        this.undoStorePromise = (async function() {
+            await localforage.dropInstance({name: "ez-undo"});
+            await updateIndicator();
+            self.undoStore = localForage.createInstance({name: "ez-undo"});
+        })();
         this.undos = [];
         this.ct = 0;
     }
@@ -79,14 +88,18 @@ export class UndoableStore extends Store {
      * Set this as an undo point (i.e., if you undo, you'll undo to here)
      */
     undoPoint() {
-        this.undos.push({c: "undo"});
+        if (!noUndo)
+            this.undos.push({c: "undo"});
     }
 
     /**
      * Drop the undo store.
      */
-    dropUndo() {
-        localforage.dropInstance({name: "ez-undo"});
+    async dropUndo() {
+        await this.undoStorePromise;
+        await localforage.dropInstance({name: "ez-undo"});
+        await updateIndicator();
+        this.undos = [];
     }
 
     /**
@@ -97,12 +110,15 @@ export class UndoableStore extends Store {
         const orig = await this.getItem(name);
 
         // Make the undo
-        if (orig !== null) {
-            const ct = this.ct++;
-            await this.undoStore.setItem(ct + "", orig);
-            this.undos.push({c: "setItem", n: name, v: ct});
-        } else {
-            this.undos.push({c: "removeItem", n: name});
+        if (!noUndo) {
+            await this.undoStorePromise;
+            if (orig !== null) {
+                const ct = this.ct++;
+                await this.undoStore.setItem(ct + "", orig);
+                this.undos.push({c: "setItem", n: name, v: ct});
+            } else {
+                this.undos.push({c: "removeItem", n: name});
+            }
         }
 
         // Then perform the replacement
@@ -117,7 +133,8 @@ export class UndoableStore extends Store {
         const orig = await this.getItem(name);
 
         // Make the undo
-        if (orig !== null) {
+        if (!noUndo && orig !== null) {
+            await this.undoStorePromise;
             const ct = this.ct++;
             await this.undoStore.setItem(ct + "", orig);
             this.undos.push({c: "setItem", n: name, v: ct});
@@ -131,6 +148,10 @@ export class UndoableStore extends Store {
      * Perform an undo.
      */
     async undo() {
+        if (noUndo)
+            return;
+        await this.undoStorePromise;
+
         let undo: any;
         while (undo = this.undos.pop()) {
             if (undo.c === "undo") {
@@ -147,6 +168,11 @@ export class UndoableStore extends Store {
             }
         }
     }
+
+    /**
+     * Promise for when the undo store is available.
+     */
+    undoStorePromise: Promise<unknown>;
 
     /**
      * Store for undo values.
@@ -183,6 +209,10 @@ async function updateIndicator() {
         return;
 
     const estimate = await navigator.storage.estimate();
+    if (!noUndo && estimate.usage / estimate.quota > 0.5) {
+        noUndo = true;
+        await localforage.dropInstance({name: "ez-undo"});
+    }
     status.pushStatus("storage",
         "Storage: " + Math.round(estimate.usage / estimate.quota * 100) + "% (" +
         bytes(estimate.usage) + "/" +
