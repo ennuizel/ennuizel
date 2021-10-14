@@ -119,10 +119,8 @@ export class Project {
         del.onclick = function() {
             ui.dialog(async function(d, show) {
                 ui.mk("div", d.box, {innerHTML: "Are you sure?<br/><br/>"});
-                const yes = ui.btn(d.box, "<u>Y</u>es, delete this track", {className: "row"});
-                hotkeys.registerHotkey(yes, d, "y");
-                const no = ui.btn(d.box, "<u>N</u>o, cancel", {className: "row"});
-                hotkeys.registerHotkey(no, d, "n");
+                const yes = hotkeys.btn(d, "_Yes, delete this track", {className: "row"});
+                const no = hotkeys.btn(d, "_No, cancel", {className: "row"});
 
                 no.onclick = () => {
                     ui.dialogClose(d);
@@ -214,21 +212,18 @@ async function getProjects() {
  */
 function projectMenu() {
     ui.dialog(async function(d, show) {
-        const newb = ui.btn(d.box, "<u>N</u>ew project", {className: "row"});
-        hotkeys.registerHotkey(newb, d, "n");
+        const newb = hotkeys.btn(d, "_New project", {className: "row"});
         newb.onclick = () => uiNewProject(d);
 
         // Show the load projects button if there are any to load
         if ((await getProjects()).length) {
-            const loadb = ui.btn(d.box, "<u>L</u>oad project", {className: "row"});
-            hotkeys.registerHotkey(loadb, d, "l");
+            const loadb = hotkeys.btn(d, "_Load project", {className: "row"});
             loadb.onclick = () => uiLoadProject(d);
         }
 
         // Only shown if there's a current project
         if (project) {
-            const deleteb = ui.btn(d.box, "<u>D</u>elete project", {className: "row"});
-            hotkeys.registerHotkey(deleteb, d, "d");
+            const deleteb = hotkeys.btn(d, "_Delete project", {className: "row"});
             deleteb.onclick = () => uiDeleteProject(d);
         }
 
@@ -245,8 +240,7 @@ function uiNewProject(d: ui.Dialog) {
     ui.dialog(async function(d, show) {
         ui.lbl(d.box, "project-name", "Project name:&nbsp;");
         let nm = ui.txt(d.box, {id: "project-name"});
-        let neww = ui.btn(d.box, "<u>N</u>ew project");
-        hotkeys.registerHotkey(neww, d, "n");
+        let neww = hotkeys.btn(d, "_New project");
 
         nm.onkeydown = ev => {
             if (ev.key === "Enter") {
@@ -414,10 +408,8 @@ async function reloadProject() {
  */
 function editMenu() {
     ui.dialog(async function(d, show) {
-        const undo = ui.btn(d.box, "<u>U</u>ndo (Ctrl+Z)", {className: "row"});
-        hotkeys.registerHotkey(undo, d, "u");
-        const selAll = ui.btn(d.box, "Select <u>a</u>ll (Ctrl+A)", {className: "row"});
-        hotkeys.registerHotkey(selAll, d, "a");
+        const undo = hotkeys.btn(d, "_Undo (Ctrl+Z)", {className: "row"});
+        const selAll = hotkeys.btn(d, "Select _all (Ctrl+A)", {className: "row"});
 
         undo.onclick = async function() {
             await performUndo();
@@ -451,8 +443,7 @@ async function performUndo() {
  */
 function tracksMenu() {
     ui.dialog(async function(d, show) {
-        const load = ui.btn(d.box, "<u>L</u>oad track(s) from file", {className: "row"});
-        hotkeys.registerHotkey(load, d, "l");
+        const load = hotkeys.btn(d, "_Load track(s) from file", {className: "row"});
         load.onclick = () => uiLoadFile(d);
         show(load);
     }, {
@@ -724,10 +715,8 @@ async function loadFile(fileName: string, raw: Blob, opts: {
 function uiDeleteProject(d: ui.Dialog) {
     ui.dialog(async function(d, show) {
         ui.mk("div", d.box, {innerHTML: "Are you sure? This will delete project data in the browser (but will not delete any saved files or data on any servers).<br/><br/>"});
-        const yesb = ui.btn(d.box, "<u>Y</u>es, delete the project", {className: "row"});
-        hotkeys.registerHotkey(yesb, d, "y");
-        const nob = ui.btn(d.box, "<u>N</u>o, cancel", {className: "row"});
-        hotkeys.registerHotkey(nob, d, "n");
+        const yesb = hotkeys.btn(d, "_Yes, delete the project", {className: "row"});
+        const nob = hotkeys.btn(d, "_No, cancel", {className: "row"});
 
         show(nob);
 

@@ -78,6 +78,31 @@ export function unregisterHotkey(el: HTMLElement) {
     hotkeyObjects.delete(el);
 }
 
+/**
+ * Make a button with a hotkey.
+ * @param parent  The dialog to place the button in.
+ * @param lbl  The label for the button, including an _ before the letter
+ *             representing the hotkey.
+ * @param opts  Other options.
+ */
+export function btn(parent: ui.Dialog, lbl: string, opts: any = {}) {
+    // Find the hotkey
+    let hotkey: string = null;
+    const idx = lbl.indexOf("_");
+    if (idx >= 0) {
+        hotkey = lbl[idx+1].toLowerCase();
+        lbl = lbl.slice(0, idx) + "<u>" + lbl[idx+1] + "</u>" + lbl.slice(idx+2);
+    }
+
+    // Make the button
+    const ret = ui.btn(parent.box, lbl, opts);
+
+    // Make the hotkey
+    registerHotkey(ret, parent, hotkey);
+
+    return ret;
+}
+
 // The actual hotkey handler
 document.body.addEventListener("keydown", ev => {
     if (!ev.altKey || ev.ctrlKey || ev.shiftKey)
