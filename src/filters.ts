@@ -27,21 +27,86 @@ import { ReadableStream } from "web-streams-polyfill/ponyfill";
 /**
  * FFMpeg filter options.
  */
-export interface FFMPegFilter {
+export interface FFMpegFilterOptions {
     /**
      * Filter name.
      */
     name: string;
 
     /**
-     * Options.
+     * Arguments.
      */
-    options: {option: string, value: string}[];
+    args: {name: string, value: string}[];
 
     /**
      * Set if the filter produces a different amount of output data than input data.
      */
     changesDuration?: boolean;
+}
+
+/**
+ * An FFMpeg filter's description, for display.
+ */
+export interface FFMpegFilter {
+    /**
+     * Human-readable display name.
+     */
+    name: string;
+
+    /**
+     * FFMpeg filter name.
+     */
+    ffName: string;
+
+    /**
+     * Parameters.
+     */
+    param: FFMpegParameter[];
+}
+
+/**
+ * A single parameter for an ffmpeg filter.
+ */
+export interface FFMpegParameter {
+    /**
+     * Human-readable display name.
+     */
+    name: string;
+
+    /**
+     * FFMpeg name.
+     */
+    ffName: string;
+
+    /**
+     * Type, in terms of <input/> types, or "number".
+     */
+    type: string;
+
+    /**
+     * Default value for text.
+     */
+    defaultText?: string;
+
+    /**
+     * Default value for number.
+     */
+    defaultNumber?: number;
+
+    /**
+     * Default value for checkbox.
+     */
+    defaultChecked?: boolean;
+
+    /**
+     * Minimum value for numeric ranges.
+     */
+    min?: number;
+
+    /**
+     * Maximum value for numeric ranges.
+     */
+    max?: string;
 }
 
 /**
@@ -52,7 +117,7 @@ export async function load() {
         ui.loading(async function(d) {
             await ffmpegFilter({
                 name: "volume",
-                options: [{option: "volume", value: "0"}]
+                args: [{name: "volume", value: "0"}]
             }, select.getSelection(), d);
         });
     };
@@ -66,7 +131,7 @@ export async function load() {
  *           This dialog will *not* be closed.
  */
 export async function ffmpegFilter(
-    filter: FFMPegFilter, sel: select.Selection, d: ui.Dialog
+    filter: FFMpegFilterOptions, sel: select.Selection, d: ui.Dialog
 ) {
     if (sel.els.size === 0) {
         // Well that was easy
@@ -81,9 +146,9 @@ export async function ffmpegFilter(
 
     // Make the filter string
     let fs = filter.name;
-    if (filter.options.length)
+    if (filter.args.length)
         fs += "=";
-    fs += filter.options.map(x => x.option + "=" + x.value).join(":");
+    fs += filter.args.map(x => x.name + "=" + x.value).join(":");
 
     // Make the stream options
     const streamOpts = {
