@@ -289,7 +289,6 @@ export class AudioTrack {
                 if (chunk.length !== remaining)
                     stream.push(chunk.slice(remaining));
                 await cur.closeRaw(true);
-                await cur.save();
                 cur = null;
                 raw = null;
 
@@ -299,7 +298,6 @@ export class AudioTrack {
         // Close the last part
         if (cur) {
             await cur.closeRaw(true);
-            await cur.save();
         }
 
         // Rebalance the tree now that we're done
@@ -506,7 +504,6 @@ export class AudioTrack {
                         await curOutNode.closeRaw(true);
                         if (opts.closeTwice)
                             await curOutNode.closeRaw();
-                        await curOutNode.save();
                         curOutNode = curOutRaw = null;
                     }
                     break;
@@ -548,7 +545,6 @@ export class AudioTrack {
                 await curOutNode.closeRaw(true);
                 if (opts.closeTwice)
                     await curOutNode.closeRaw();
-                await curOutNode.save();
                 curOutNode = null;
             }
         }
@@ -884,8 +880,10 @@ export class AudioData {
 
         if (--this.readers <= 0) {
             this.readers = 0;
-            if (this.rawModified)
+            if (this.rawModified) {
                 await this.compress();
+                await this.save();
+            }
             this.raw = null;
             this.rawModified = false;
         }
