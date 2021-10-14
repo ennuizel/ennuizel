@@ -348,8 +348,8 @@ export class AudioTrack {
         keepOpen?: boolean
     } = {}) {
         // Calculate times
-        const startSec = ("start" in opts) ? opts.start : 0;
-        const endSec = ("end" in opts) ? opts.end : this.duration() + 2;
+        const startSec = (typeof opts.start === "number") ? opts.start : 0;
+        const endSec = (typeof opts.end === "number") ? opts.end : this.duration() + 2;
         const start = Math.floor(startSec * this.sampleRate) * this.channels;
         const end = Math.ceil(endSec * this.sampleRate) * this.channels;
         let remaining = end - start;
