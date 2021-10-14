@@ -90,7 +90,20 @@ export class Project {
     }
 
     /**
-     * Add a track.
+     * Create a new track and add it.
+     * @param opts  Options for creating the track.
+     */
+    async newTrack(opts: {name?: string} = {}) {
+        const track = new audioData.AudioTrack(
+            await id36.genFresh(this.store, "audio-track-"),
+            this, opts
+        );
+        await this.addTrack(track);
+        return track;
+    }
+
+    /**
+     * Add a track that's already been created.
      * @param track  The track to add.
      */
     async addTrack(track: Track) {
@@ -618,12 +631,7 @@ async function loadFile(fileName: string, raw: Blob, opts: {
     for (const stream of audioStreams) {
         // Make a track
         const trackName = baseName + ((audioStreams.length <= 1) ? "" : ("-" + (stream.index+1)));
-        const track = new audioData.AudioTrack(
-            await id36.genFresh(project.store, "audio-track-"),
-            project,
-            {name: trackName}
-        );
-        project.addTrack(track);
+        const track = await project.newTrack({name: trackName});
         audioTracks[stream.index] = track;
 
         // Make the decoder
