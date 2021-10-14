@@ -618,7 +618,7 @@ export class AudioData {
      */
     constructor(public id: string, public track: AudioTrack) {
         this.pos = this.len = 0;
-        this.raw = this.waveform = null;
+        this.raw = this.rawPromise = this.waveform = null;
         this.rawModified = false;
         this.readers = 0;
         this.parent = this.left = this.right = null;
@@ -778,17 +778,28 @@ export class AudioData {
      * involve uncompressing it. Each openRaw must be balanced with a closeRaw.
      */
     async openRaw(): Promise<TypedArray> {
+        this.readers++;
+
         if (this.raw) {
             // Already exists
-            this.readers++;
             return this.raw;
         }
+
+        // See if somebody else is already doing this
+        if (this.rawPromise) {
+            await this.rawPromise;
+            return this.raw;
+        }
+
+        // OK, do it ourself
+        let rawRes: (x:any)=>unknown = null;
+        this.rawPromise = new Promise(res => rawRes = res);
 
         const self = this;
         let rframes: any[];
 
         await avthreads.enqueueSync(async function(libav) {
-            // Otherwise, we need to decompress it. First, read it all in.
+            // Decompress it. First, read it all in.
             let buf: TypedArray = null;
             const wavpack = await self.track.project.store.getItem("audio-data-compressed-" + self.id);
             await loadLibAV();
@@ -832,7 +843,8 @@ export class AudioData {
         }
 
         this.raw = ret;
-        this.readers++;
+        rawRes(null);
+        this.rawPromise = null;
         return ret;
     }
 
@@ -1021,6 +1033,12 @@ export class AudioData {
      * needed.
      */
     private raw: TypedArray;
+
+    /**
+     * Set temporarily when the raw data is being uncompressed, so that
+     * multiple readers don't try to uncompress simultaneously.
+     */
+    private rawPromise: Promise<unknown>;
 
     /**
      * Set if the raw data has been modified, to ensure that it's saved.
