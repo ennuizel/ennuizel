@@ -98,7 +98,8 @@ export function btn(parent: ui.Dialog, lbl: string, opts: any = {}) {
     const ret = ui.btn(parent.box, lbl, opts);
 
     // Make the hotkey
-    registerHotkey(ret, parent, hotkey);
+    if (hotkey)
+        registerHotkey(ret, parent, hotkey);
 
     return ret;
 }

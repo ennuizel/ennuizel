@@ -128,7 +128,7 @@ export class AudioTrack {
      *                 parameter is just to know the store.
      * @param opts  Other options.
      */
-    constructor(public id: string, public project: {store: store.Store}, opts: {
+    constructor(public id: string, public project: {store: store.UndoableStore}, opts: {
         name?: string,
         format?: number,
         sampleRate?: number,
