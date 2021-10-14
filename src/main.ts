@@ -19,10 +19,11 @@ declare let LibAV: any, localforage: any;
 
 import * as audio from "./audio";
 import * as avthreads from "./avthreads";
-import * as ui from "./ui";
+import * as filters from "./filters";
 import * as project from "./project";
 import * as select from "./select";
 import * as store from "./store";
+import * as ui from "./ui";
 
 import * as streamsaver from "streamsaver";
 import { WritableStream } from "web-streams-polyfill/ponyfill";
@@ -74,6 +75,7 @@ import { WritableStream } from "web-streams-polyfill/ponyfill";
         }
 
         await avthreads.load();
+        await filters.load();
         await project.load();
         await select.load();
         await store.load();
