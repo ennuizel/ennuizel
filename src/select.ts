@@ -331,9 +331,10 @@ async function updateDisplay() {
             // Don't show the selection if we're not selected
             if (selectedEls.has(sel)) {
                 if (selectingRange) {
-                    // Highlight whatever is selected
-                    ctx.fillStyle = "rgba(255,255,255,0.5)";
-                    ctx.fillRect(startPx, 0, endPx - startPx, ui.trackHeight);
+                    // Blur what isn't selected
+                    ctx.fillStyle = "rgba(0,0,0,0.5)";
+                    ctx.fillRect(0, 0, startPx, ui.trackHeight);
+                    ctx.fillRect(endPx, 0, w - endPx, ui.trackHeight);
 
                 } else {
                     // Just draw a line for the point selected
