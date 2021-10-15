@@ -19,6 +19,7 @@ declare let LibAV: any;
 
 import * as audio from "./audio";
 import * as audioData from "./audio-data";
+import * as exportt from "./export";
 import * as hotkeys from "./hotkeys";
 import * as id36 from "./id36";
 import * as select from "./select";
@@ -463,6 +464,21 @@ function tracksMenu() {
     ui.dialog(async function(d, show) {
         const load = hotkeys.btn(d, "_Load track(s) from file", {className: "row"});
         load.onclick = () => uiLoadFile(d);
+
+        const exp = hotkeys.btn(d, "_Export selection", {className: "row"});
+        exp.onclick = () => {
+            ui.loading(async function(d) {
+                await exportt.exportAudio({
+                    format: "flac",
+                    codec: "flac",
+                    sampleFormat: 2 /* S32 */,
+                    prefix: "test"
+                }, select.getSelection(), d);
+            }, {
+                reuse: d
+            });
+        };
+
         show(load);
     }, {
         closeable: true
