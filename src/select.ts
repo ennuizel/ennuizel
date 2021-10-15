@@ -244,9 +244,11 @@ export function getSelection(): Selection {
 
 /**
  * Select all selectables, and clear the range so that everything is selected.
+ * @param opts  Selection options.
  */
-export async function selectAll() {
-    selectEnd = selectStart;
+export async function selectAll(opts: {tracksOnly?: boolean} = {}) {
+    if (!opts.tracksOnly)
+        selectEnd = selectStart;
     for (const sel of selectables)
         selectedEls.add(sel);
     await updateDisplay();
@@ -375,7 +377,7 @@ document.body.addEventListener("keydown", async function(ev) {
 
     } else if (ev.key === "a" && ev.ctrlKey) {
         ev.preventDefault();
-        selectAll();
+        selectAll({tracksOnly: ev.altKey});
 
     }
 });

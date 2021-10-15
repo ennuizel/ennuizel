@@ -422,6 +422,7 @@ function editMenu() {
     ui.dialog(async function(d, show) {
         const undo = hotkeys.btn(d, "_Undo (Ctrl+Z)", {className: "row"});
         const selAll = hotkeys.btn(d, "Select _all (Ctrl+A)", {className: "row"});
+        const selAllTracks = hotkeys.btn(d, "Select all _tracks (Ctrl+Alt+A)", {className: "row"});
 
         undo.onclick = async function() {
             await performUndo();
@@ -430,6 +431,11 @@ function editMenu() {
 
         selAll.onclick = async function() {
             await select.selectAll();
+            ui.dialogClose(d);
+        };
+
+        selAllTracks.onclick = async function() {
+            await select.selectAll({tracksOnly: true});
             ui.dialogClose(d);
         };
 
