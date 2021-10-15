@@ -170,6 +170,24 @@ const standardFilters: FFMpegFilter[] = (function() {
             // FIXME: Link
             // FIXME: Detection
         ]
+    },
+
+    {
+        name: "Dynamic audio _normalizer (leveler)",
+        ffName: "dynaudnorm",
+        params: [
+            num("Frame _length (ms)", "framelen", 500, {min: 10, max: 8000}),
+            // FIXME: Must be odd:
+            num("_Gaussian filter window size", "gausssize", 31, {min: 3, max: 301}),
+            num("Target _peak value (dB)", "peak", -0.5, {suffix: "dB", min: -36, max: 0}),
+            num("Maximum _gain (dB)", "maxgain", 20, {suffix: "dB", min: 0, max: 40}),
+            // FIXME: This being linear is stupid:
+            num("Target _RMS (linear)", "targetrms", 0, {min: 0, max: 1}),
+            // FIXME: Coupling
+            // FIXME: Correct DC
+            num("Traditional _compression factor", "compress", 0, {min: 0, max: 30}),
+            num("_Threshold (linear)", "threshold", 0, {min: 0, max: 1})
+        ]
     }
     ];
 })();
