@@ -310,6 +310,7 @@ export class AudioTrack implements track.Track {
         if (this.root)
             this.root = this.root.rebalance();
 
+        await this.save();
         await avthreads.flush();
     }
 
@@ -457,7 +458,9 @@ export class AudioTrack implements track.Track {
 
     /**
      * Overwrite a specific range of data from a ReadableStream. The stream
-     * must give TypedArray chunks.
+     * must give TypedArray chunks, and must be of the same length as is being
+     * overwritten. A stream() with keepOpen and an overwrite() with closeTwice
+     * creates an effective filter.
      * @param opts  Options. In particular, you can set the start and end time
      *              here.
      */
@@ -571,6 +574,151 @@ export class AudioTrack implements track.Track {
             if (curIn.done)
                 break;
         }
+
+        await this.save();
+        await avthreads.flush();
+    }
+
+    /**
+     * Replace a segment of audio data with the audio data from another track.
+     * The other track will be deleted. Can clip (by not giving a replacement)
+     * or insert (by replacing no time) as well.
+     * @param start  Start time, in seconds.
+     * @param end  End time, in seconds.
+     * @param replacement  Track containing replacement data, which must be in
+     *                     the same format, sample rate, number of tracks.
+     */
+    async replace(start: number, end: number, replacement: AudioTrack) {
+        // We need to have *some* node to work with, so if we don't, make something up
+        if (!this.root) {
+            this.root = new AudioData(
+                await id36.genFresh(this.project.store, "audio-data-"),
+                this
+            );
+            this.root.initRaw(new Uint8Array(0)); /* Type doesn't matter since
+                                                   * this data is being
+                                                   * discarded */
+        }
+
+        // Convert times into track units
+        start = Math.floor(start * this.sampleRate) * this.channels;
+        end = Math.ceil(end * this.sampleRate) * this.channels;
+
+        // 1: Find the start point
+        let startLoc = this.root.find(start);
+        if (!startLoc) {
+            // Just place it at the end
+            let startNode = this.root;
+            while (startNode.right)
+                startNode = startNode.right;
+            startLoc = {offset: startNode.len, node: startNode};
+        }
+        const startNode = startLoc.node;
+        const startRaw = await startNode.openRaw();
+
+        // 2: Split the node
+        const splitNext = new AudioData(
+            await id36.genFresh(this.project.store, "audio-data-"),
+            this, {insertAfter: startNode}
+        );
+        const splitNextRaw = await splitNext.initRaw(startRaw);
+        splitNextRaw.set(
+            startRaw.subarray(
+                startLoc.offset, startNode.len - startLoc.offset));
+        startNode.len = startLoc.offset;
+        await splitNext.closeRaw(true);
+        await startNode.closeRaw(true);
+
+        // 3: Clip the appropriate amount out
+        let remaining = end - start;
+        let offset = startLoc.offset;
+        let cur = startLoc.node;
+        while (remaining) {
+            // Move to the next node
+            if (cur.right) {
+                cur = cur.right;
+                while (cur.left)
+                    cur = cur.left;
+
+            } else {
+                while (true) {
+                    let next = cur.parent;
+                    if (!next) {
+                        cur = null;
+                        break;
+                    }
+                    if (next.left === cur) {
+                        // Continue with this node
+                        cur = next;
+                        break;
+                    } else {
+                        // Keep going up
+                        cur = next;
+                    }
+                }
+                if (!cur)
+                    break;
+
+            }
+
+            // Remove (some of?) this node
+            const raw = await cur.openRaw();
+            if (remaining >= cur.len) {
+                // Cut out this node entirely
+                cur.len = 0;
+                remaining -= cur.len;
+                await cur.closeRaw(); // No point saving
+            } else {
+                // Just cut out part of it
+                raw.set(raw.slice(remaining));
+                cur.len -= remaining;
+                remaining = 0;
+                await cur.closeRaw(true); // Need to keep this data
+            }
+        }
+
+        // 4: Steal the data from the other track
+        const newData: AudioData[] = [];
+        if (replacement) {
+            replacement.root.fillArray(newData);
+            replacement.root = null;
+        }
+
+        // 5: Insert it into ours
+        cur = startLoc.node;
+        for (const next of newData) {
+            const nnext = new AudioData(next.id, this, {insertAfter: cur});
+            await nnext.load();
+            nnext.right = cur.right;
+            if (cur.right)
+                cur.right.parent = nnext;
+            cur.right = nnext;
+            nnext.parent = cur;
+            cur = nnext;
+        }
+
+        // 6: Delete the other track
+        if (replacement) {
+            // FIXME: What if it's in a project?
+            await replacement.del();
+        }
+
+        // 7: Sanitize our data
+        const d: AudioData[] = [];
+        this.root.fillArray(d);
+        for (let i = d.length - 1; i >= 0; i--) {
+            const el = d[i];
+            if (el.len === 0) {
+                await el.del();
+                d.splice(i, 1);
+            }
+        }
+
+        // 8: Rebalance our data
+        this.root = AudioData.balanceArray(d);
+
+        await this.save();
+        await avthreads.flush();
     }
 
     /**
@@ -630,7 +778,10 @@ export class AudioData {
      * @param track  Track this AudioData belongs to. Note that setting it here
      *               does not actually add it to the track.
      */
-    constructor(public id: string, public track: AudioTrack) {
+    constructor(
+        public id: string, public track: AudioTrack,
+        opts: {insertAfter?: AudioData} = {}
+    ) {
         this.pos = this.len = 0;
         this.raw = this.rawPromise = this.waveform = null;
         this.rawModified = false;
@@ -638,6 +789,11 @@ export class AudioData {
         this.parent = this.left = this.right = null;
 
         this.img = ui.mk("img", track.waveform);
+        if (opts.insertAfter) {
+            const before = opts.insertAfter.img.nextSibling;
+            if (before && before !== this.img)
+                track.waveform.insertBefore(this.img, before);
+        }
     }
 
     /**
@@ -677,6 +833,11 @@ export class AudioData {
     async del() {
         // Make sure it doesn't get written later
         this.readers = Infinity;
+
+        // Remove the image
+        try {
+            this.img.parentNode.removeChild(this.img);
+        } catch (ex) {}
 
         // Delete it from the store
         const store = this.track.project.store;
@@ -932,7 +1093,7 @@ export class AudioData {
             });
 
         const frames = await libav.ff_filter_multi(buffersrc_ctx, buffersink_ctx, frame, [{
-            data: raw.subarray(0, this.len),
+            data: raw.subarray(0, Math.max(this.len, this.track.channels)),
             channel_layout,
             format: track.format,
             pts: 0,
@@ -975,7 +1136,7 @@ export class AudioData {
             });
 
         const [frameD] = await libav.ff_filter_multi(buffersrc_ctx, buffersink_ctx, frame, [{
-            data: raw.subarray(0, this.len),
+            data: raw.subarray(0, Math.max(this.len, this.track.channels)),
             channel_layout,
             format: track.format,
             pts: 0,
@@ -989,7 +1150,7 @@ export class AudioData {
 
         // Figure out the image size
         const spp = ~~(track.sampleRate / ui.pixelsPerSecond);
-        const w = ~~(data.length / track.sampleRate * ui.pixelsPerSecond);
+        const w = Math.max(~~(data.length / track.sampleRate * ui.pixelsPerSecond), 1);
 
         // Make the canvas
         const canvas = ui.mk("canvas", null, {width: w, height: ui.trackHeight});

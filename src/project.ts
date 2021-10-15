@@ -30,6 +30,9 @@ import * as util from "./util";
 
 import { ReadableStream } from "web-streams-polyfill/ponyfill";
 
+// These buttons are disabled when no project is loaded
+const projectButtons = ["edit", "tracks", "filters"];
+
 /**
  * An Ennuizel project.
  */
@@ -370,12 +373,11 @@ async function loadProject(id: string, store?: store.UndoableStore) {
     await project.load();
 
     // Free up the buttons
-    const tracks = ui.ui.menu.tracks;
-    tracks.classList.remove("off");
-    tracks.disabled = false;
-    const edit = ui.ui.menu.edit;
-    edit.classList.remove("off");
-    edit.disabled = false;
+    for (const nm of projectButtons) {
+        const b: HTMLButtonElement = (<any> ui.ui.menu)[nm];
+        b.classList.remove("off");
+        b.disabled = false;
+    }
 
     return project;
 }
@@ -395,12 +397,11 @@ async function unloadProject() {
 
     // Clear out the UI
     ui.ui.main.innerHTML = "";
-    const tracks = ui.ui.menu.tracks;
-    tracks.classList.add("off");
-    tracks.disabled = true;
-    const edit = ui.ui.menu.edit;
-    edit.classList.add("off");
-    edit.disabled = true;
+    for (const nm of projectButtons) {
+        const b: HTMLButtonElement = (<any> ui.ui.menu)[nm];
+        b.classList.add("off");
+        b.disabled = true;
+    }
 }
 
 /**
@@ -711,8 +712,6 @@ async function loadFile(fileName: string, raw: Blob, opts: {
 
     // And save it
     await project.save();
-    for (const idx in audioTracks)
-        await audioTracks[idx].save();
 }
 
 /**

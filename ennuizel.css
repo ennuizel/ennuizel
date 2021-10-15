@@ -263,6 +263,12 @@ input[type="checkbox"]:checked:after {
     top: 0.1em;
 }
 
+label.ez {
+    display: inline-block;
+    width: 20em;
+    text-align: right;
+}
+
 /* Tracks */
 .track-spacer {
     min-height: 2em;
