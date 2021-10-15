@@ -147,6 +147,9 @@ const standardFilters: FFMpegFilter[] = (function() {
     function num(name: string, ffName: string, defaultNumber: number, opts: any = {}) {
         return Object.assign({name, ffName, type: "number", defaultNumber}, opts);
     }
+    function chk(name: string, ffName: string, defaultChecked: boolean, opts: any = {}) {
+        return Object.assign({name, ffName, type: "checkbox", defaultChecked}, opts);
+    }
 
     return [
     {
@@ -190,6 +193,55 @@ const standardFilters: FFMpegFilter[] = (function() {
             num("Traditional _compression factor", "compress", 0, {min: 0, max: 30}),
             num("_Threshold (linear)", "threshold", 0, {min: 0, max: 1})
         ]
+    },
+
+    {
+        name: "_Echo",
+        ffName: "aecho",
+        changesDuration: true,
+        params: [
+            num("_Input gain (dB)", "in_gain", -4.5, {suffix: "dB", min: -60, max: 0}),
+            num("_Output gain (dB)", "out_gain", -10.5, {suffix: "dB", min: -60, max: 0}),
+            // FIXME: Multiple delays, decays
+            num("_Delay (ms)", "delays", 1000, {min: 0, max: 90000}),
+            num("De_cay (linear)", "decays", 0.5, {min: 0, max: 1})
+        ]
+    },
+
+    {
+        name: "_Limiter",
+        ffName: "alimiter",
+        params: [
+            num("_Limit (dB)", "limit", 0, {suffix: "dB", min: -24, max: 0}),
+            num("_Input gain (dB)", "level_in", 0, {suffix: "dB", min: -36, max: 0}),
+            num("_Output gain (dB)", "level_out", 0, {suffix: "dB", min: -36, max: 0}),
+            num("_Attack time (ms)", "attack", 5, {min: 1, max: 1000}),
+            num("_Release time (ms)", "release", 50, {min: 1, max: 1000}),
+            // FIXME: ASC is what now???
+            chk("Auto-le_vel", "level", true)
+        ]
+    },
+
+    {
+        name: "_Tempo",
+        ffName: "atempo",
+        changesDuration: true,
+        params: [
+            num("_Tempo multiplier", "tempo", 1, {min: 0.5, max: 100})
+        ]
+    },
+
+    {
+        name: "_FFmpeg filter (advanced)",
+        ffName: null,
+        changesDuration: true,
+        params: [
+            {
+                name: "Filter _graph",
+                ffName: null,
+                type: "text"
+            }
+        ]
     }
     ];
 })();
@@ -218,10 +270,13 @@ export async function ffmpegFilter(
         d.box.innerHTML = "Filtering...";
 
     // Make the filter string
-    let fs = filter.name;
-    if (filter.args.length)
-        fs += "=";
-    fs += filter.args.map(x => x.name + "=" + x.value).join(":");
+    let fs = ""
+    if (filter.name) {
+        fs = filter.name;
+        if (filter.args.length)
+            fs += "=";
+    }
+    fs += filter.args.map(x => (x.name ? x.name + "=" : "") + x.value).join(":");
 
     // Make the stream options
     const streamOpts = {
@@ -364,7 +419,7 @@ async function filterMenu() {
 
         // Make a button for each filter in the standard list
         for (const filter of standardFilters) {
-            const b = hotkeys.btn(d, filter.name, {className: "row"});
+            const b = hotkeys.btn(d, filter.name, {className: "row small"});
             if (!first)
                 first = b;
             b.onclick = () => uiFilter(d, filter);
