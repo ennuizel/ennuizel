@@ -624,14 +624,20 @@ export class AudioTrack implements track.Track {
         const splitNextRaw = await splitNext.initRaw(startRaw);
         splitNextRaw.set(
             startRaw.subarray(
-                startLoc.offset, startNode.len - startLoc.offset));
+                startLoc.offset, startNode.len));
+        splitNext.len = startNode.len - startLoc.offset;
         startNode.len = startLoc.offset;
         await splitNext.closeRaw(true);
         await startNode.closeRaw(true);
+        await avthreads.flush();
+        splitNext.right = startNode.right;
+        if (splitNext.right)
+            splitNext.right.parent = splitNext;
+        startNode.right = splitNext;
+        splitNext.parent = startNode;
 
         // 3: Clip the appropriate amount out
         let remaining = end - start;
-        let offset = startLoc.offset;
         let cur = startLoc.node;
         while (remaining) {
             // Move to the next node
@@ -665,16 +671,15 @@ export class AudioTrack implements track.Track {
             const raw = await cur.openRaw();
             if (remaining >= cur.len) {
                 // Cut out this node entirely
-                cur.len = 0;
                 remaining -= cur.len;
-                await cur.closeRaw(); // No point saving
+                cur.len = 0;
             } else {
                 // Just cut out part of it
                 raw.set(raw.slice(remaining));
                 cur.len -= remaining;
                 remaining = 0;
-                await cur.closeRaw(true); // Need to keep this data
             }
+            await cur.closeRaw(true);
         }
 
         // 4: Steal the data from the other track
@@ -690,8 +695,7 @@ export class AudioTrack implements track.Track {
             const nnext = new AudioData(next.id, this, {insertAfter: cur});
             await nnext.load();
             nnext.right = cur.right;
-            if (cur.right)
-                cur.right.parent = nnext;
+            nnext.right.parent = nnext;
             cur.right = nnext;
             nnext.parent = cur;
             cur = nnext;
@@ -1064,8 +1068,10 @@ export class AudioData {
 
     // Compress and render this data, and store it
     private async compress() {
-        await avthreads.enqueue(libav => this.wavpack(libav, this.raw));
-        await avthreads.enqueue(libav => this.render(libav, this.raw));
+        if (this.len) {
+            await avthreads.enqueue(libav => this.wavpack(libav, this.raw));
+            await avthreads.enqueue(libav => this.render(libav, this.raw));
+        }
     }
 
     // wavpack-compress this data
@@ -1099,7 +1105,7 @@ export class AudioData {
             });
 
         const frames = await libav.ff_filter_multi(buffersrc_ctx, buffersink_ctx, frame, [{
-            data: raw.subarray(0, Math.max(this.len, this.track.channels)),
+            data: raw.subarray(0, this.len),
             channel_layout,
             format: track.format,
             pts: 0,
@@ -1142,7 +1148,7 @@ export class AudioData {
             });
 
         const [frameD] = await libav.ff_filter_multi(buffersrc_ctx, buffersink_ctx, frame, [{
-            data: raw.subarray(0, Math.max(this.len, this.track.channels)),
+            data: raw.subarray(0, this.len),
             channel_layout,
             format: track.format,
             pts: 0,
