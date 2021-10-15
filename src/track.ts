@@ -38,6 +38,11 @@ export interface Track {
     id: string;
 
     /**
+     * The only thing a track knows about the project is that it has a store.
+     */
+    project: {store: store.UndoableStore};
+
+    /**
      * All tracks must support saving, but loading is type-specific.
      */
     save: (opts?: {deep?: boolean}) => Promise<unknown>;
