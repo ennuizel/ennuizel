@@ -812,6 +812,7 @@ export class AudioData {
     async load() {
         const store = this.track.project.store;
         const d: any = await store.getItem("audio-data-" + this.id);
+        if (!d) return;
         this.len = d.len;
 
         // Waveform gets displayed immediately if applicable
@@ -977,6 +978,11 @@ export class AudioData {
             // Decompress it. First, read it all in.
             let buf: TypedArray = null;
             const wavpack = await self.track.project.store.getItem("audio-data-compressed-" + self.id);
+            if (!wavpack) {
+                // Whoops, make it up!
+                rframes = [{data: new Float32Array(0)}];
+                return;
+            }
             await loadLibAV();
             const fn = "tmp-" + self.id + ".wv"
             await libav.writeFile(fn, wavpack);

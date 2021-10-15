@@ -754,7 +754,7 @@ async function deleteProject() {
     await store.store.removeItem("ez-project-" + project.id);
 
     // Then drop it from the projects list
-    const projects: string[] = await store.store.getItem("ez-projects");
+    const projects: string[] = await store.store.getItem("ez-projects") || [];
     const idx = projects.indexOf(project.id);
     if (idx >= 0) {
         projects.splice(idx, 1);
