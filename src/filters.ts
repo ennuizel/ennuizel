@@ -446,7 +446,6 @@ async function uiFilter(d: ui.Dialog, filter: FFMpegFilter) {
 async function uiFilterGo(
     d: ui.Dialog, filter: FFMpegFilter, pels: Record<string, HTMLInputElement>
 ) {
-    console.log(pels);
     await ui.loading(async function(d) {
         // Convert the parameter elements into arguments
         const args: NameValuePair[] = [];
