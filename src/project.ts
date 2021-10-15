@@ -712,8 +712,6 @@ async function loadFile(fileName: string, raw: Blob, opts: {
 
     // And save it
     await project.save();
-    for (const idx in audioTracks)
-        await audioTracks[idx].save();
 }
 
 /**

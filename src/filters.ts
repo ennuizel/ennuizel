@@ -20,7 +20,9 @@ declare let LibAV: any;
 import * as audioData from "./audio-data";
 import * as avthreads from "./avthreads";
 import * as hotkeys from "./hotkeys";
+import * as id36 from "./id36";
 import * as select from "./select";
+import { EZStream } from "./stream";
 import * as track from "./track";
 import * as ui from "./ui";
 
@@ -39,19 +41,19 @@ interface NameValuePair {
  */
 export interface FFMpegFilterOptions {
     /**
-     * Filter name.
+     * Filter name (in FFMpeg).
      */
     name: string;
-
-    /**
-     * Arguments.
-     */
-    args: NameValuePair[];
 
     /**
      * Set if the filter produces a different amount of output data than input data.
      */
     changesDuration?: boolean;
+
+    /**
+     * Arguments.
+     */
+    args: NameValuePair[];
 }
 
 /**
@@ -264,7 +266,7 @@ export async function ffmpegFilter(
             });
 
         // Input stream
-        const inStream = track.stream(Object.assign({keepOpen: true}, streamOpts)).getReader();
+        const inStream = track.stream(Object.assign({keepOpen: !filter.changesDuration}, streamOpts)).getReader();
 
         // Filter stream
         const filterStream = new ReadableStream({
@@ -304,8 +306,26 @@ export async function ffmpegFilter(
             }
         });
 
-        // Write it out (FIXME: changesDuration)
-        await track.overwrite(filterStream, Object.assign({closeTwice: true}, streamOpts));
+        if (filter.changesDuration) {
+            // We have to write it to a new track, then copy it over
+            const newTrack = new audioData.AudioTrack(
+                await id36.genFresh(track.project.store, "audio-track-"),
+                track.project, {
+                    format: track.format,
+                    sampleRate: track.sampleRate,
+                    channels: track.channels
+                }
+            );
+
+            await newTrack.append(new EZStream(filterStream));
+
+            await track.replace(sel.range ? sel.start : 0, sel.range ? sel.end : Infinity, newTrack);
+
+        } else {
+            // Just overwrite it
+            await track.overwrite(filterStream, Object.assign({closeTwice: true}, streamOpts));
+
+        }
 
         // And get rid of the libav instance
         libav.terminate();
@@ -482,10 +502,11 @@ async function uiFilterGo(
         }
 
         // Join that into options
-        // FIXME: changesDuration
+        // FIXME: changesDuration()
         const opts: FFMpegFilterOptions = {
             name: filter.ffName,
-            args
+            args,
+            changesDuration: !!filter.changesDuration
         };
 
         // Get the selection
