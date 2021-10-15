@@ -79,13 +79,17 @@ export function unregisterHotkey(el: HTMLElement) {
 }
 
 /**
- * Make a button with a hotkey.
- * @param parent  The dialog to place the button in.
- * @param lbl  The label for the button, including an _ before the letter
- *             representing the hotkey.
- * @param opts  Other options.
+ * Make an element hotkeyable.
+ * @param parent  The dialog that the element will be placed in (but note that
+ *                it's the caller's job to place the element).
+ * @param lbl  The label to be hotkey-ified. Will be passed back to the
+ *             callback without its _.
+ * @param callback  The function to actually create the element, and presumably
+ *                  add it to the DOM (though you're free to do that later).
  */
-export function btn(parent: ui.Dialog, lbl: string, opts: any = {}) {
+export function mk<T extends HTMLElement>(
+    parent: ui.Dialog, lbl: string, callback: (lbl: string) => T
+) {
     // Find the hotkey
     let hotkey: string = null;
     const idx = lbl.indexOf("_");
@@ -94,14 +98,38 @@ export function btn(parent: ui.Dialog, lbl: string, opts: any = {}) {
         lbl = lbl.slice(0, idx) + "<u>" + lbl[idx+1] + "</u>" + lbl.slice(idx+2);
     }
 
-    // Make the button
-    const ret = ui.btn(parent.box, lbl, opts);
+    // Make the element
+    const el = callback(lbl);
 
     // Make the hotkey
     if (hotkey)
-        registerHotkey(ret, parent, hotkey);
+        registerHotkey(el, parent, hotkey);
 
-    return ret;
+    return el;
+}
+
+/**
+ * Make a button with a hotkey.
+ * @param parent  The dialog to place the button in.
+ * @param lbl  The label for the button, including an _ before the letter
+ *             representing the hotkey.
+ * @param opts  Other options.
+ */
+export function btn(parent: ui.Dialog, lbl: string, opts: any = {}) {
+    return mk(parent, lbl, lbl => ui.btn(parent.box, lbl, opts));
+}
+
+/**
+ * Make a <label/> with a hotkey.
+ * @param parent  The dialog to place the label in.
+ * @param htmlFor  ID of the element that this label corresponds to.
+ * @param lbl  Text of the label.
+ * @param opts  Other options.
+ */
+export function lbl(
+    parent: ui.Dialog, htmlFor: string, lbl: string, opts: any = {}
+) {
+    return mk(parent, lbl, lbl => ui.lbl(parent.box, htmlFor, lbl, opts));
 }
 
 // The actual hotkey handler

@@ -19,10 +19,20 @@ declare let LibAV: any;
 
 import * as audioData from "./audio-data";
 import * as avthreads from "./avthreads";
+import * as hotkeys from "./hotkeys";
 import * as select from "./select";
+import * as track from "./track";
 import * as ui from "./ui";
 
 import { ReadableStream } from "web-streams-polyfill/ponyfill";
+
+/**
+ * Simple name-value pair.
+ */
+interface NameValuePair {
+    name: string;
+    value: string;
+}
 
 /**
  * FFMpeg filter options.
@@ -36,7 +46,7 @@ export interface FFMpegFilterOptions {
     /**
      * Arguments.
      */
-    args: {name: string, value: string}[];
+    args: NameValuePair[];
 
     /**
      * Set if the filter produces a different amount of output data than input data.
@@ -59,9 +69,15 @@ export interface FFMpegFilter {
     ffName: string;
 
     /**
+     * Does this filter change duration? Either a simple boolean or a function
+     * to determine based on arguments. Default false.
+     */
+    changesDuration?: boolean | ((args: NameValuePair[]) => boolean);
+
+    /**
      * Parameters.
      */
-    param: FFMpegParameter[];
+    params: FFMpegParameter[];
 }
 
 /**
@@ -99,6 +115,11 @@ export interface FFMpegParameter {
     defaultChecked?: boolean;
 
     /**
+     * Suffix (e.g. dB) to add to the given value.
+     */
+    suffix?: string;
+
+    /**
      * Minimum value for numeric ranges.
      */
     min?: number;
@@ -113,15 +134,45 @@ export interface FFMpegParameter {
  * Load filtering options.
  */
 export async function load() {
-    ui.ui.menu.filters.onclick = () => {
-        ui.loading(async function(d) {
-            await ffmpegFilter({
-                name: "volume",
-                args: [{name: "volume", value: "0"}]
-            }, select.getSelection(), d);
-        });
-    };
+    ui.ui.menu.filters.onclick = filterMenu;
+    hotkeys.registerHotkey(ui.ui.menu.filters, null, "f");
 }
+
+/**
+ * Standard FFMpeg filters.
+ */
+const standardFilters: FFMpegFilter[] = (function() {
+    function num(name: string, ffName: string, defaultNumber: number, opts: any = {}) {
+        return Object.assign({name, ffName, type: "number", defaultNumber}, opts);
+    }
+
+    return [
+    {
+        name: "_Volume",
+        ffName: "volume",
+        params: [
+            num("_Volume (dB)", "volume", 0, {suffix: "dB"})
+        ]
+    },
+
+    {
+        name: "_Compressor",
+        ffName: "acompressor",
+        params: [
+            num("_Input gain (dB)", "level_in", 0, {suffix: "dB", min: -36, max: 36}),
+            // FIXME: Mode
+            num("_Threshold to apply compression (dB)", "threshold", -18, {suffix: "dB", min: -60, max: 0}),
+            num("_Ratio to compress signal", "ratio", 2, {min: 1, max: 20}),
+            num("_Attack time (ms)", "attack", 20, {min: 0.01, max: 2000}),
+            num("Re_lease time (ms)", "release", 250, {min: 0.01, max: 9000}),
+            num("_Output gain (dB)", "makeup", 0, {suffix: "dB", min: 0, max: 36}),
+            num("Curve of compressor _knee", "knee", 2.82843, {min: 1, max: 8})
+            // FIXME: Link
+            // FIXME: Detection
+        ]
+    }
+    ];
+})();
 
 /**
  * Apply an FFMpeg filter with the given options.
@@ -138,8 +189,10 @@ export async function ffmpegFilter(
         return;
     }
 
-    // Get the tracks
-    const tracks = Array.from(sel.els).map(x => <audioData.AudioTrack> x.track);
+    // Get the audio tracks
+    const tracks = <audioData.AudioTrack[]> Array.from(sel.els)
+        .map(x => x.track)
+        .filter(x => x.type() === track.TrackType.Audio);
 
     if (d)
         d.box.innerHTML = "Filtering...";
@@ -264,3 +317,174 @@ export async function ffmpegFilter(
     await Promise.all(running);
 }
 
+/**
+ * Show the main filter menu.
+ */
+async function filterMenu() {
+    await ui.dialog(async function(d, show) {
+        let first: HTMLElement = null;
+
+        // Make a button for each filter in the standard list
+        for (const filter of standardFilters) {
+            const b = hotkeys.btn(d, filter.name, {className: "row"});
+            if (!first)
+                first = b;
+            b.onclick = () => uiFilter(d, filter);
+        }
+
+        show(first);
+    }, {
+        closeable: true
+    });
+}
+
+/**
+ * Show the user interface for a particular filter.
+ * @param d  The dialog to reuse for the filter display.
+ * @param filter  The filter itself.
+ */
+async function uiFilter(d: ui.Dialog, filter: FFMpegFilter) {
+    await ui.dialog(async function(d, show) {
+        let first: HTMLElement = null;
+        const pels: Record<string, HTMLInputElement> = Object.create(null);
+
+        // Show each of the filter parameters
+        for (const param of filter.params) {
+            const id = "ez-filter-param-" + filter.ffName + "-" + param.ffName;
+            const div = ui.mk("div", d.box, {className: "row"});
+            const lbl = hotkeys.mk(d, param.name + ":&nbsp;",
+                lbl => ui.lbl(div, id, lbl, {className: "ez"}));
+            const inp = pels[param.ffName] = ui.mk("input", div, {
+                id,
+                type: param.type === "number" ? "text" : param.type
+            });
+
+            if (!first)
+                first = inp;
+
+            // Set any type-specific properties
+            if (param.type === "number") {
+                // Default
+                if (typeof param.defaultNumber === "number")
+                    inp.value = param.defaultNumber + "";
+
+                // Range
+                if (typeof param.min === "number" ||
+                    typeof param.max === "number") {
+                    inp.addEventListener("change", () => {
+                        const val = +inp.value;
+                        if (typeof param.min === "number" && val < param.min)
+                            inp.value = param.min + "";
+                        else if (typeof param.max === "number" && val > param.max)
+                            inp.value = param.max + "";
+                    });
+                }
+
+            } else if (param.type === "text") {
+                // Default
+                if (param.defaultText)
+                    inp.value = param.defaultText;
+
+            } else if (param.type === "checkbox") {
+                // Default
+                inp.checked = !!param.defaultChecked;
+
+            }
+
+            if (param.type === "number" || param.type === "text") {
+                // Support enter to submit
+                inp.addEventListener("keydown", ev => {
+                    if (ev.key === "Enter") {
+                        ev.preventDefault();
+                        doIt();
+                    }
+                });
+            }
+
+        }
+
+        // And an actual "filter" button
+        const btn = hotkeys.btn(d, "_Filter", {className: "row"});
+        btn.onclick = doIt;
+
+        // Perform the actual filter
+        function doIt() {
+            uiFilterGo(d, filter, pels);
+        }
+
+        show(first);
+    }, {
+        closeable: true,
+        reuse: d
+    });
+}
+
+/**
+ * Perform an actual filter (from the UI).
+ * @param d  The dialog to reuse for the filter display.
+ * @param filter  The filter itself.
+ * @param pels  Elements corresponding to the parameters.
+ */
+async function uiFilterGo(
+    d: ui.Dialog, filter: FFMpegFilter, pels: Record<string, HTMLInputElement>
+) {
+    console.log(pels);
+    await ui.loading(async function(d) {
+        // Convert the parameter elements into arguments
+        const args: NameValuePair[] = [];
+        for (const param of filter.params) {
+            let val: string = "";
+
+            // Get out the value
+            switch (param.type) {
+                case "number": {
+                    // Check the range
+                    let v = +pels[param.ffName].value;
+                    if (typeof param.min === "number" && v < param.min)
+                        v = param.min;
+                    else if (typeof param.max === "number" && v > param.max)
+                        v = param.max;
+                    val = v + "";
+                    break;
+                }
+
+                case "checkbox":
+                    val = pels[param.ffName].checked ? "1" : "0";
+                    break;
+
+                default:
+                    val = pels[param.ffName].value;
+            }
+
+            // Add any suffix
+            if (param.suffix)
+                val += param.suffix;
+
+            // Add it to the list
+            args.push({name: param.ffName, value: val});
+        }
+
+        // Join that into options
+        // FIXME: changesDuration
+        const opts: FFMpegFilterOptions = {
+            name: filter.ffName,
+            args
+        };
+
+        // Get the selection
+        const sel = select.getSelection();
+        if (sel.els.size === 0) {
+            // Nothing to do!
+            return;
+        }
+
+        // Prepare for undo
+        Array.from(sel.els)[0].track.project.store.undoPoint();
+
+        // And perform the filter
+        await ffmpegFilter(opts, sel, d);
+
+    }, {
+        reuse: d
+    });
+}
