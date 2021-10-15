@@ -37,11 +37,11 @@ interface NameValuePair {
 }
 
 /**
- * FFMpeg filter options.
+ * FFmpeg filter options.
  */
-export interface FFMpegFilterOptions {
+export interface FFmpegFilterOptions {
     /**
-     * Filter name (in FFMpeg).
+     * Filter name (in FFmpeg).
      */
     name: string;
 
@@ -57,16 +57,16 @@ export interface FFMpegFilterOptions {
 }
 
 /**
- * An FFMpeg filter's description, for display.
+ * An FFmpeg filter's description, for display.
  */
-export interface FFMpegFilter {
+export interface FFmpegFilter {
     /**
      * Human-readable display name.
      */
     name: string;
 
     /**
-     * FFMpeg filter name.
+     * FFmpeg filter name.
      */
     ffName: string;
 
@@ -79,20 +79,20 @@ export interface FFMpegFilter {
     /**
      * Parameters.
      */
-    params: FFMpegParameter[];
+    params: FFmpegParameter[];
 }
 
 /**
  * A single parameter for an ffmpeg filter.
  */
-export interface FFMpegParameter {
+export interface FFmpegParameter {
     /**
      * Human-readable display name.
      */
     name: string;
 
     /**
-     * FFMpeg name.
+     * FFmpeg name.
      */
     ffName: string;
 
@@ -141,9 +141,9 @@ export async function load() {
 }
 
 /**
- * Standard FFMpeg filters.
+ * Standard FFmpeg filters.
  */
-const standardFilters: FFMpegFilter[] = (function() {
+const standardFilters: FFmpegFilter[] = (function() {
     function num(name: string, ffName: string, defaultNumber: number, opts: any = {}) {
         return Object.assign({name, ffName, type: "number", defaultNumber}, opts);
     }
@@ -247,14 +247,14 @@ const standardFilters: FFMpegFilter[] = (function() {
 })();
 
 /**
- * Apply an FFMpeg filter with the given options.
+ * Apply an FFmpeg filter with the given options.
  * @param filter  The filter and options.
  * @param sel  The selection to filter.
  * @param d  (Optional) The dialog in which to show the status, if applicable.
  *           This dialog will *not* be closed.
  */
 export async function ffmpegFilter(
-    filter: FFMpegFilterOptions, sel: select.Selection, d: ui.Dialog
+    filter: FFmpegFilterOptions, sel: select.Selection, d: ui.Dialog
 ) {
     if (sel.els.size === 0) {
         // Well that was easy
@@ -436,7 +436,7 @@ async function filterMenu() {
  * @param d  The dialog to reuse for the filter display.
  * @param filter  The filter itself.
  */
-async function uiFilter(d: ui.Dialog, filter: FFMpegFilter) {
+async function uiFilter(d: ui.Dialog, filter: FFmpegFilter) {
     await ui.dialog(async function(d, show) {
         let first: HTMLElement = null;
         const pels: Record<string, HTMLInputElement> = Object.create(null);
@@ -519,7 +519,7 @@ async function uiFilter(d: ui.Dialog, filter: FFMpegFilter) {
  * @param pels  Elements corresponding to the parameters.
  */
 async function uiFilterGo(
-    d: ui.Dialog, filter: FFMpegFilter, pels: Record<string, HTMLInputElement>
+    d: ui.Dialog, filter: FFmpegFilter, pels: Record<string, HTMLInputElement>
 ) {
     await ui.loading(async function(d) {
         // Convert the parameter elements into arguments
@@ -558,7 +558,7 @@ async function uiFilterGo(
 
         // Join that into options
         // FIXME: changesDuration()
-        const opts: FFMpegFilterOptions = {
+        const opts: FFmpegFilterOptions = {
             name: filter.ffName,
             args,
             changesDuration: !!filter.changesDuration
