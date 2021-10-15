@@ -292,7 +292,7 @@ label.ez {
 .track-display {
     display: inline-block;
     position: relative;
-    height: 128px;
+    vertical-align: top;
 }
 
 .selection-canvas {
