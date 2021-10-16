@@ -256,14 +256,14 @@ const standardFilters: FFmpegFilter[] = (function() {
 export async function ffmpegFilter(
     filter: FFmpegFilterOptions, sel: select.Selection, d: ui.Dialog
 ) {
-    if (sel.tracks.length === 0) {
-        // Well that was easy
-        return;
-    }
-
     // Get the audio tracks
     const tracks = <audioData.AudioTrack[]>
         sel.tracks.filter(x => x.type() === track.TrackType.Audio);
+
+    if (tracks.length === 0) {
+        // Well that was easy
+        return;
+    }
 
     if (d)
         d.box.innerHTML = "Filtering...";
@@ -407,6 +407,159 @@ export async function ffmpegFilter(
 
     // Wait for them all to finish
     await Promise.all(running);
+}
+
+/**
+ * Mix the selected tracks into a new track.
+ * @param sel  The selection to mix.
+ * @param d  (Optional) The dialog in which to show the status, if applicable.
+ *           This dialog will *not* be closed.
+ * @param opts  Other options.
+ */
+export async function mixTracks(
+    sel: select.Selection, d: ui.Dialog, opts: {
+        preFilter?: string,
+        postFilter?: string
+    } = {}
+): Promise<track.Track> {
+    // Get the audio tracks
+    const tracks = <audioData.AudioTrack[]>
+        sel.tracks.filter(x => x.type() === track.TrackType.Audio);
+
+    if (tracks.length === 0) {
+        // Well that was easy
+        return null;
+    }
+
+    if (d)
+        d.box.innerHTML = "Mixing...";
+
+    const preFilter = opts.preFilter || "anull";
+    const postFilter = opts.postFilter || "anull";
+
+    // The filter string is complex. First, give each track a name.
+    let fs = tracks.map((x, idx) => "[in" + idx + "]" + preFilter + "[aud" + idx + "]").join(";");
+
+    // Then start mixing them together
+    let mtracks = tracks.map((x, idx) => "aud" + idx);
+    while (mtracks.length > 16) {
+        // Mix them in groups of 16
+        let otracks: string[] = [];
+        for (let i = 0; i < mtracks.length; i += 16) {
+            let gtracks = mtracks.slice(i, i + 16);
+            fs += ";" + gtracks.map(x => "[" + x + "]").join("") +
+                  "amix=" + gtracks.length + "[aud" + otracks.length + "]";
+            otracks.push("aud" + otracks.length);
+        }
+        mtracks = otracks;
+    }
+
+    // Then mix whatever remains as one
+    fs += ";" + mtracks.map(x => "[" + x + "]").join("") +
+        "amix=" + mtracks.length + "," + postFilter + "[out]";
+
+    // Make the stream options
+    const streamOpts = {
+        start: sel.range ? sel.start : void 0,
+        end: sel.range ? sel.end : void 0
+    };
+
+    // Make our output track
+    const outTrack = new audioData.AudioTrack(
+        await id36.genFresh(tracks[0].project.store, "audio-track-"),
+        tracks[0].project, {
+            name: "Mix",
+            sampleRate: Math.max.apply(Math, tracks.map(x => x.sampleRate)),
+            format: 3 /* FLT */,
+            channels: Math.max.apply(Math, tracks.map(x => x.channels))
+        }
+    );
+    const channelLayout = (outTrack.channels === 1) ? 4 : ((1<<outTrack.channels)-1);
+
+    // Figure out the maximum duration
+    const duration = Math.max.apply(Math, tracks.map(x => x.duration()));
+    let mixed = 0;
+
+    // Function to show the current status
+    function showStatus() {
+        if (d)
+            d.box.innerHTML = "Mixing... " + Math.round(mixed / duration * 100) + "%";
+    }
+
+    // Make a libav instance
+    const libav = await LibAV.LibAV();
+
+    // Make the filter
+    const frame = await libav.av_frame_alloc();
+    const [filter_graph, buffersrc_ctx, buffersink_ctx] =
+        await libav.ff_init_filter_graph(fs, tracks.map(x => ({
+            sample_rate: x.sampleRate,
+            sample_fmt: x.format,
+            channel_layout: (x.channels === 1) ? 4 : ((1<<x.channels)-1)
+        })), {
+            sample_rate: outTrack.sampleRate,
+            sample_fmt: outTrack.format,
+            channel_layout: channelLayout
+        });
+
+    // Make all the input streams
+    const inStreams = tracks.map(x => x.stream(streamOpts).getReader());
+
+    // Remember which tracks are done
+    const trackDone = tracks.map(x => false);
+    let trackDoneCt = 0;
+
+    // The mix stream
+    const mixStream = new ReadableStream({
+        async pull(controller) {
+            while (true) {
+                // Get some data
+                const inps = await Promise.all(inStreams.map(async function(x, idx) {
+                    if (trackDone[idx])
+                        return [];
+
+                    const inp = await x.read();
+                    if (inp.done) {
+                        trackDone[idx] = true;
+                        trackDoneCt++;
+                        return [];
+                    }
+
+                    inp.value.node = null;
+                    return [inp.value];
+                }));
+
+                // Filter it
+                const outp = await libav.ff_filter_multi(
+                    buffersrc_ctx, buffersink_ctx, frame,
+                    inps, trackDone);
+
+                // Write it out
+                if (outp.length) {
+                    for (const part of outp) {
+                        controller.enqueue(part.data);
+                        mixed += part.nb_samples / outTrack.sampleRate;
+                    }
+                    showStatus();
+                }
+
+                // Maybe end it
+                if (trackDoneCt === tracks.length)
+                    controller.close();
+
+                if (outp.length || trackDoneCt === tracks.length)
+                    break;
+            }
+        }
+    });
+
+    // Append that to the new track
+    await outTrack.append(new EZStream(mixStream));
+
+    // And get rid of the libav instance
+    libav.terminate();
+
+    return outTrack;
 }
 
 /**

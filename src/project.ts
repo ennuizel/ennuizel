@@ -20,6 +20,7 @@ declare let LibAV: any;
 import * as audio from "./audio";
 import * as audioData from "./audio-data";
 import * as exportt from "./export";
+import * as filters from "./filters";
 import * as hotkeys from "./hotkeys";
 import * as id36 from "./id36";
 import * as select from "./select";
@@ -468,6 +469,18 @@ function tracksMenu() {
         const load = hotkeys.btn(d, "_Load track(s) from file", {className: "row"});
         load.onclick = () => uiLoadFile(d);
 
+        const mix = hotkeys.btn(d, "Mi_x selected tracks", {className: "row"});
+        mix.onclick = () => uiMix(d, false);
+
+        const mixKeep = hotkeys.btn(d, "_Mix selected tracks into new track", {className: "row"});
+        mixKeep.onclick = () => uiMix(d, true);
+
+        const mixLevel = hotkeys.btn(d, "Mix and le_vel selected tracks", {className: "row"});
+        mixLevel.onclick = () => uiMix(d, false, {preFilter: "dynaudnorm", postFilter: "dynaudnorm"});
+
+        const mixLevelKeep = hotkeys.btn(d, "M_ix and level selected tracks into new track", {className: "row"});
+        mixLevelKeep.onclick = () => uiMix(d, true, {preFilter: "dynaudnorm", postFilter: "dynaudnorm"});
+
         show(load);
     }, {
         closeable: true
@@ -723,6 +736,43 @@ async function loadFile(fileName: string, raw: Blob, opts: {
 
     // And save it
     await project.save();
+}
+
+/**
+ * Mix the selected tracks (UI).
+ * @param d  Optional dialog in which to show progress.
+ * @param keep  Keep the original tracks (don't delete them).
+ * @param opts  Other mix options.
+ */
+function uiMix(d: ui.Dialog, keep: boolean, opts: {
+    preFilter?: string,
+    postFilter?: string
+} = {}) {
+    ui.loading(async function(d) {
+        const sel = select.getSelection();
+
+        // This is an undo point
+        project.store.undoPoint();
+
+        // Mix...
+        const outTrack = await filters.mixTracks(sel, d, opts);
+        if (!outTrack)
+            return;
+
+        // Add the new track
+        project.addTrack(outTrack);
+
+        // And delete the old
+        if (!keep) {
+            for (const inTrack of sel.tracks) {
+                if (inTrack.type() === track.TrackType.Audio)
+                    await project.removeTrack(inTrack);
+            }
+        }
+
+    }, {
+        reuse: d
+    });
 }
 
 /**
