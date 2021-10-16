@@ -28,7 +28,8 @@ export const ui = {
         project: <HTMLButtonElement> null,
         edit: <HTMLButtonElement> null,
         tracks: <HTMLButtonElement> null,
-        filters: <HTMLButtonElement> null
+        filters: <HTMLButtonElement> null,
+        about: <HTMLButtonElement> null
     },
 
     // Main project space
@@ -75,7 +76,8 @@ export function load() {
         project: gebi("b-project"),
         edit: gebi("b-edit"),
         tracks: gebi("b-tracks"),
-        filters: gebi("b-filters")
+        filters: gebi("b-filters"),
+        about: gebi("b-about")
     };
     ui.main = gebi("project");
     ui.status = gebi("status");

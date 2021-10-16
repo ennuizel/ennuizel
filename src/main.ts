@@ -74,6 +74,7 @@ import { WritableStream } from "web-streams-polyfill/ponyfill";
                 await ui.alert("Failed to acquire permission for persistent storage. Large projects will fail.");
         }
 
+        // Load all the components that need loading
         await avthreads.load();
         await filters.load();
         await project.load();
@@ -111,6 +112,23 @@ import { WritableStream } from "web-streams-polyfill/ponyfill";
             ("" + ev.reason)
         );
     });
+
+    // And make an about screen
+    ui.ui.menu.about.onclick = () => {
+        ui.dialog(async function(d, show) {
+            const about = ui.mk("div", d.box, {
+                innerHTML: 'This is Ennuizel, an audio editor in your web browser! Ennuizel is <a href="https://github.com/Yahweasel/ennuizel">open source</a>.<br/><br/>'
+            });
+            about.style.maxWidth = "30em";
+
+            const ok = ui.btn(d.box, "OK", {className: "row"});
+            ok.onclick = () => ui.dialogClose(d);
+
+            show(ok);
+        }, {
+            closeable: true
+        });
+    };
 
 })();
 
