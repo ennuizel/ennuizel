@@ -117,7 +117,7 @@ import { WritableStream } from "web-streams-polyfill/ponyfill";
     ui.ui.menu.about.onclick = () => {
         ui.dialog(async function(d, show) {
             const about = ui.mk("div", d.box, {
-                innerHTML: 'This is Ennuizel, an audio editor in your web browser! Ennuizel is <a href="https://github.com/Yahweasel/ennuizel">open source</a>.<br/><br/>'
+                innerHTML: 'This is Ennuizel, an audio editor in your web browser! Ennuizel is not “cloud”-based: everything is saved locally in your browser\'s local storage space. Ennuizel is <a href="https://github.com/Yahweasel/ennuizel">open source</a>.<br/><br/>'
             });
             about.style.maxWidth = "30em";
 
