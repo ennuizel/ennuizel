@@ -18,6 +18,7 @@
 declare let LibAV: any;
 
 import * as audioData from "./audio-data";
+import * as hotkeys from "./hotkeys";
 import * as select from "./select";
 import * as track from "./track";
 import * as ui from "./ui";
@@ -25,9 +26,9 @@ import * as ui from "./ui";
 import * as streamsaver from "streamsaver";
 
 /**
- * Options for exporting.
+ * Base options for exporting.
  */
-export interface ExportOptions {
+interface ExportOptionsBase {
     /**
      * File format for export.
      */
@@ -44,10 +45,20 @@ export interface ExportOptions {
     sampleFormat: number;
 
     /**
+     * Sample rate, if not variable.
+     */
+    sampleRate?: number;
+
+    /**
      * Filename extension, if not the same as format.
      */
     ext?: string;
+}
 
+/**
+ * Per-export options for exporting.
+ */
+export interface ExportOptions extends ExportOptionsBase {
     /**
      * Filename prefix.
      */
@@ -63,6 +74,20 @@ export interface ExportOptions {
      */
     suffixTrackName?: boolean;
 }
+
+/**
+ * Standard export formats.
+ */
+const standardExports: {name: string, options: ExportOptionsBase}[] = [
+    {name: "_FLAC", options: {format: "flac", codec: "flac", sampleFormat: 2 /* S32 */}},
+    {name: "_M4A (MPEG-4 audio)", options: {format: "ipod", ext: "m4a", codec: "aac", sampleFormat: 8 /* FLTP */}},
+    {name: "Ogg _Vorbis", options: {format: "ogg", codec: "libvorbis", sampleFormat: 8 /* FLTP */}},
+    {name: "_Opus", options: {format: "ogg", ext: "opus", codec: "libopus", sampleFormat: 3 /* FLT */, sampleRate: 48000}},
+    // FIXME: ALAC not working
+    //{name: "_ALAC (Apple Lossless)", options: {format: "ipod", ext: "m4a", codec: "alac", sampleFormat: 7 /* S32P */}},
+    {name: "wav_pack", options: {format: "wavpack", ext: "wv", codec: "wavpack", sampleFormat: 8 /* FLTP */}},
+    {name: "_wav", options: {format: "wav", codec: "pcm_s16le", sampleFormat: 1 /* S16 */}}
+];
 
 /**
  * Export selected audio with the given options.
@@ -101,6 +126,16 @@ export async function exportAudio(
         duration: x.sampleCount()
     }));
 
+    // Function to show the current status
+    function showStatus() {
+        if (d) {
+            let statusStr = status.map(x =>
+                x.name + ": " + Math.round(x.exported / x.duration * 100) + "%")
+            .join("<br/>");
+            d.box.innerHTML = "Exporting...<br/>" + statusStr;
+        }
+    }
+
     // Delete any existing export info
     /*
     {
@@ -135,9 +170,9 @@ export async function exportAudio(
         let cacheNum = -1;
         let cache: Uint8Array = null;
         libav.onwrite = function(name: string, pos: number, buf: Uint8Array) {
-            writePromise = writePromise.then(() => write(name, pos, buf));
+            writePromise = writePromise.then(() => write(pos, buf));
 
-            async function write(name: string, pos: number, buf: Uint8Array) {
+            async function write(pos: number, buf: Uint8Array) {
                 // Make sure our length is right
                 fileLen = Math.max(fileLen, pos + buf.length);
 
@@ -146,8 +181,9 @@ export async function exportAudio(
                 const storeName = "export-" + fname + "-" + storeNum;
                 const storeStart = storeNum * bufLen;
                 const storeEnd = storeStart + bufLen;
+                let nextBuf: Uint8Array = null;
                 if (pos + buf.length > storeEnd) {
-                    await write(name, storeEnd, buf.subarray(storeEnd - pos));
+                    nextBuf = buf.subarray(storeEnd - pos);
                     buf = buf.subarray(0, storeEnd - pos);
                 }
                 const storeOff = pos - storeStart;
@@ -168,17 +204,21 @@ export async function exportAudio(
 
                 // Save what we're writing to it
                 part.set(buf, storeOff);
+
+                // Maybe write more
+                if (nextBuf)
+                    await write(storeEnd, nextBuf);
             }
         };
 
         // Prepare the encoder
         const [codec, c, frame, pkt, frame_size] = await libav.ff_init_encoder(opts.codec, {
             sample_fmt: opts.sampleFormat,
-            sample_rate: track.sampleRate,
+            sample_rate: opts.sampleRate || track.sampleRate,
             channel_layout
         });
         const [oc, fmt, pb, st] = await libav.ff_init_muxer(
-            {filename: fname, open: true, device: true},
+            {filename: fname, format_name: opts.format, open: true, device: true},
             [[c, 1, track.sampleRate]]);
         await libav.avformat_write_header(oc, 0);
 
@@ -189,23 +229,39 @@ export async function exportAudio(
                 sample_fmt: track.format,
                 channel_layout
             }, {
-                sample_rate: track.sampleRate,
+                sample_rate: opts.sampleRate || track.sampleRate,
                 sample_fmt: opts.sampleFormat,
                 channel_layout,
                 frame_size
             });
 
         // Encode
+        let pts = 0;
         while (true) {
+            // Convert a chunk
             const inFrame = await inStream.read();
-            if (inFrame.value)
-                inFrame.value.node = null;
+            if (inFrame.value) {
+                const f = inFrame.value;
+                f.node = null;
+                f.ptshi = f.dtshi = 0;
+                f.pts = f.dts = pts;
+                pts += f.data.length / track.channels;
+            }
             const fFrames = await libav.ff_filter_multi(buffersrc_ctx,
                 buffersink_ctx, frame, inFrame.done ? [] : [inFrame.value],
                 inFrame.done);
             const packets = await libav.ff_encode_multi(c, frame, pkt, fFrames,
                 inFrame.done);
             await libav.ff_write_multi(oc, pkt, packets);
+            await writePromise;
+
+            // Update the status
+            if (inFrame.done)
+                status[idx].exported = status[idx].duration;
+            else
+                status[idx].exported += inFrame.value.data.length;
+            showStatus();
+
             if (inFrame.done)
                 break;
         }
@@ -259,4 +315,37 @@ export async function exportAudio(
 
     // Wait for them all to finish
     await Promise.all(running);
+}
+
+/**
+ * Show the user interface to export audio.
+ * @param d  The dialog to reuse.
+ * @param name  Name prefix for export.
+ */
+export async function uiExport(d: ui.Dialog, name: string) {
+    await ui.dialog(async function(d, show) {
+        let first: HTMLElement = null;
+
+        // Label
+        ui.mk("div", d.box, {innerHTML: "Format:", className: "row"}).style.textAlign = "center";
+
+        // Show each format
+        for (const format of standardExports) {
+            const btn = hotkeys.btn(d, format.name, {className: "row small"});
+            if (!first)
+                first = btn;
+            btn.onclick = () => {
+                ui.loading(async function(d) {
+                    await exportAudio(Object.assign({prefix: name}, format.options), select.getSelection(), d);
+                }, {
+                    reuse: d
+                });
+            };
+        }
+
+        show(first);
+    }, {
+        closeable: true,
+        reuse: d
+    });
 }

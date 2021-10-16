@@ -241,6 +241,9 @@ function projectMenu() {
         if (project) {
             const deleteb = hotkeys.btn(d, "_Delete project", {className: "row"});
             deleteb.onclick = () => uiDeleteProject(d);
+
+            const exp = hotkeys.btn(d, "_Export audio file", {className: "row"});
+            exp.onclick = () => exportt.uiExport(d, project.name);
         }
 
         show(newb);
@@ -464,20 +467,6 @@ function tracksMenu() {
     ui.dialog(async function(d, show) {
         const load = hotkeys.btn(d, "_Load track(s) from file", {className: "row"});
         load.onclick = () => uiLoadFile(d);
-
-        const exp = hotkeys.btn(d, "_Export selection", {className: "row"});
-        exp.onclick = () => {
-            ui.loading(async function(d) {
-                await exportt.exportAudio({
-                    format: "flac",
-                    codec: "flac",
-                    sampleFormat: 2 /* S32 */,
-                    prefix: "test"
-                }, select.getSelection(), d);
-            }, {
-                reuse: d
-            });
-        };
 
         show(load);
     }, {
