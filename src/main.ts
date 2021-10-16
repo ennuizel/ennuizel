@@ -201,7 +201,7 @@ import { WritableStream } from "web-streams-polyfill/ponyfill";
             about.style.maxWidth = "45rem";
 
             const li = ui.mk("textarea", d.box, {
-                readonly: true,
+                readOnly: true,
                 innerHTML: licenseInfo,
                 className: "row"
             });
