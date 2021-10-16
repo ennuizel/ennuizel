@@ -17,8 +17,9 @@
 /**
  * Convert a time in seconds to a string timestamp.
  * @param s  The time.
+ * @param min  Show only the fields needed.
  */
-export function timestamp(s: number) {
+export function timestamp(s: number, min?: boolean) {
     const h = ~~(s / 3600);
     s -= h * 3600;
     const m = ~~(s / 60);
@@ -30,6 +31,25 @@ export function timestamp(s: number) {
     if (ms.length < 2) ms = "0" + ms;
     let ss = s.toFixed(3);
     if (s < 10) ss = "0" + ss;
+
+    if (min) {
+        // Minimize seconds by removing the decimal
+        if (s === ~~s) {
+            ss = s + "";
+            if (s < 10) ss = "0" + ss;
+        }
+
+        // Give as little as needed
+        if (h === 0) {
+            if (m === 0) {
+                return s.toString();
+            } else {
+                return `${m}:${ss}`;
+            }
+        } else {
+            return `${h}:${ms}:${ss}`;
+        }
+    }
 
     return `${hs}:${ms}:${ss}`;
 }

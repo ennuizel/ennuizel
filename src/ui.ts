@@ -33,6 +33,9 @@ export const ui = {
         about: <HTMLButtonElement> null
     },
 
+    // The timeline
+    timeline: <HTMLCanvasElement> null,
+
     // Main project space
     main: <HTMLElement> null,
 
@@ -83,6 +86,7 @@ export function load() {
         zoom: gebi("b-zoom"),
         about: gebi("b-about")
     };
+    ui.timeline = gebi("timeline");
     ui.main = gebi("project");
     ui.status = gebi("status");
 

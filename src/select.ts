@@ -18,6 +18,7 @@
 
 import * as track from "./track";
 import * as ui from "./ui";
+import * as util from "./util";
 
 /**
  * A selectable entity. Should be a track.
@@ -321,6 +322,48 @@ async function updateDisplay() {
         const playHeadPx = (playHead === null) ? null : Math.round(
             playHead * ui.pixelsPerSecond * ui.ui.zoom - scrollLeft
         );
+
+        // Draw the timeline
+        {
+            const timeline = ui.ui.timeline;
+            const tw = timeline.width = window.innerWidth;
+            const th = 32 /* FIXME: magic number */;
+            const ctx = timeline.getContext("2d");
+            ctx.clearRect(0, 0, tw, th);
+            ctx.textBaseline = "top";
+
+            // Figure out the scale to draw
+            const pps = ui.pixelsPerSecond * ui.ui.zoom;
+            let labelScale = 1;
+            if (pps >= 32) {
+                // 32 pixels per second, enough to label every second
+                labelScale = 1;
+            } else if (pps >= 32/5) {
+                labelScale = 5;
+            } else if (pps >= 32/10) {
+                labelScale = 10;
+            } else if (pps >= 32/30) {
+                labelScale = 30;
+            } else {
+                labelScale = 60;
+            }
+
+            // And draw it
+            const firstSec = ~~(scrollLeft / pps);
+            let sec: number, x: number;
+            for (sec = firstSec, x = firstSec * pps - scrollLeft + 128; x < tw; sec++, x += pps) {
+                if (sec % labelScale === 0) {
+                    ctx.fillStyle = "#fff";
+                    ctx.fillRect(~~x, 0, 1, th/2);
+                    const ts = util.timestamp(sec, true);
+                    const m = ctx.measureText(ts);
+                    ctx.fillText(ts, ~~x - m.width/2, th/2+2);
+                } else {
+                    ctx.fillStyle = "#999";
+                    ctx.fillRect(~~x, 0, 1, th/4);
+                }
+            }
+        }
 
         // And draw it
         for (const sel of selectables) {
