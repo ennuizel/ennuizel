@@ -388,4 +388,5 @@ document.body.addEventListener("keydown", async function(ev) {
  */
 export async function load() {
     ui.ui.main.addEventListener("scroll", updateDisplay);
+    ui.ui.onzoom.push(updateDisplay);
 }

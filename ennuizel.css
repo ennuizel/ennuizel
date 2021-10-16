@@ -166,6 +166,11 @@ a {
     overflow: auto;
 }
 
+#zoom-selector {
+    display: none;
+    width: 100%;
+}
+
 button:not(.plain), .button {
     transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, border-radius 0.2s ease-in-out;
     background-color: var(--bg);

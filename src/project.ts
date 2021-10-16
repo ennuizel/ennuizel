@@ -207,6 +207,16 @@ export async function load() {
     hotkeys.registerHotkey(menu.edit, null, "e");
     menu.tracks.onclick = tracksMenu;
     hotkeys.registerHotkey(menu.tracks, null, "t");
+    menu.zoom.onclick = () => {
+        const s = ui.ui.zoomSelector.style;
+        if (s.display === "block") {
+            s.display = "none";
+        } else {
+            s.display = "block";
+            ui.ui.zoomSelector.focus();
+        }
+    };
+    hotkeys.registerHotkey(menu.zoom, null, "z");
     await unloadProject();
 }
 

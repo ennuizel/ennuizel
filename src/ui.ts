@@ -29,6 +29,7 @@ export const ui = {
         edit: <HTMLButtonElement> null,
         tracks: <HTMLButtonElement> null,
         filters: <HTMLButtonElement> null,
+        zoom: <HTMLButtonElement> null,
         about: <HTMLButtonElement> null
     },
 
@@ -45,6 +46,8 @@ export const ui = {
     closeable: <Dialog[]> [],
 
     // Zoomability
+    zoomSelector: <HTMLInputElement> null,
+    onzoom: <(()=>unknown)[]> [],
     utilityCSS: <HTMLStyleElement> null,
     zoom: 0.1
 };
@@ -77,13 +80,20 @@ export function load() {
         edit: gebi("b-edit"),
         tracks: gebi("b-tracks"),
         filters: gebi("b-filters"),
+        zoom: gebi("b-zoom"),
         about: gebi("b-about")
     };
     ui.main = gebi("project");
     ui.status = gebi("status");
 
+    ui.zoomSelector = gebi("zoom-selector");
     ui.utilityCSS = mk("style", document.body, {type: "text/css"});
     zoom();
+
+    ui.zoomSelector.addEventListener("input", () => {
+        ui.zoom = (+ui.zoomSelector.value) / 100;
+        zoom();
+    });
 }
 
 /**
@@ -107,6 +117,8 @@ function zoom() {
         ":root {" +
         "--zoom-wave: " + ui.zoom + ";" +
         "}";
+    for (const oz of ui.onzoom)
+        oz();
 }
 
 /**
