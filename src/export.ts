@@ -83,8 +83,7 @@ const standardExports: {name: string, options: ExportOptionsBase}[] = [
     {name: "_M4A (MPEG-4 audio)", options: {format: "ipod", ext: "m4a", codec: "aac", sampleFormat: 8 /* FLTP */}},
     {name: "Ogg _Vorbis", options: {format: "ogg", codec: "libvorbis", sampleFormat: 8 /* FLTP */}},
     {name: "_Opus", options: {format: "ogg", ext: "opus", codec: "libopus", sampleFormat: 3 /* FLT */, sampleRate: 48000}},
-    // FIXME: ALAC not working
-    //{name: "_ALAC (Apple Lossless)", options: {format: "ipod", ext: "m4a", codec: "alac", sampleFormat: 7 /* S32P */}},
+    {name: "_ALAC (Apple Lossless)", options: {format: "ipod", ext: "m4a", codec: "alac", sampleFormat: 7 /* S32P */}},
     {name: "wav_pack", options: {format: "wavpack", ext: "wv", codec: "wavpack", sampleFormat: 8 /* FLTP */}},
     {name: "_wav", options: {format: "wav", codec: "pcm_s16le", sampleFormat: 1 /* S16 */}}
 ];
@@ -150,6 +149,7 @@ export async function exportAudio(
     // The export function for each track
     async function exportThread(track: audioData.AudioTrack, idx: number) {
         const channel_layout = (track.channels === 1) ? 4 : ((1<<track.channels)-1);
+        const sample_rate = opts.sampleRate || track.sampleRate;
 
         // Figure out the file name
         const fname = opts.prefix +
@@ -214,12 +214,13 @@ export async function exportAudio(
         // Prepare the encoder
         const [codec, c, frame, pkt, frame_size] = await libav.ff_init_encoder(opts.codec, {
             sample_fmt: opts.sampleFormat,
-            sample_rate: opts.sampleRate || track.sampleRate,
+            sample_rate,
             channel_layout
         });
+
         const [oc, fmt, pb, st] = await libav.ff_init_muxer(
             {filename: fname, format_name: opts.format, open: true, device: true},
-            [[c, 1, track.sampleRate]]);
+            [[c, 1, sample_rate]]);
         await libav.avformat_write_header(oc, 0);
 
         // Prepare the filter
@@ -229,7 +230,7 @@ export async function exportAudio(
                 sample_fmt: track.format,
                 channel_layout
             }, {
-                sample_rate: opts.sampleRate || track.sampleRate,
+                sample_rate,
                 sample_fmt: opts.sampleFormat,
                 channel_layout,
                 frame_size
@@ -240,16 +241,16 @@ export async function exportAudio(
         while (true) {
             // Convert a chunk
             const inFrame = await inStream.read();
-            if (inFrame.value) {
-                const f = inFrame.value;
-                f.node = null;
-                f.ptshi = f.dtshi = 0;
-                f.pts = f.dts = pts;
-                pts += f.data.length / track.channels;
-            }
+            if (inFrame.value)
+                inFrame.value.node = null;
             const fFrames = await libav.ff_filter_multi(buffersrc_ctx,
                 buffersink_ctx, frame, inFrame.done ? [] : [inFrame.value],
                 inFrame.done);
+            for (const frame of fFrames) {
+                frame.pts = frame.dts = pts;
+                frame.ptshi = frame.dtshi = 0;
+                pts += frame.nb_samples;
+            }
             const packets = await libav.ff_encode_multi(c, frame, pkt, fFrames,
                 inFrame.done);
             await libav.ff_write_multi(oc, pkt, packets);
@@ -280,7 +281,7 @@ export async function exportAudio(
 
         // And stream it out
         const lastNum = ~~(fileLen / bufLen);
-        const lastLen = fileLen & bufLen;
+        const lastLen = fileLen % bufLen;
         for (let i = 0; i <= lastNum; i++) {
             const storeName = "export-" + fname + "-" + i;
             const part = await store.getItem(storeName);
