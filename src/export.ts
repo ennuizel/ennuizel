@@ -98,9 +98,8 @@ export async function exportAudio(
     opts: ExportOptions, sel: select.Selection, d: ui.Dialog
 ) {
     // Get the audio tracks
-    const tracks = <audioData.AudioTrack[]> Array.from(sel.els)
-        .map(x => x.track)
-        .filter(x => x.type() === track.TrackType.Audio);
+    const tracks = <audioData.AudioTrack[]>
+        sel.tracks.filter(x => x.type() === track.TrackType.Audio);
 
     if (tracks.length === 0) {
         // Easy!

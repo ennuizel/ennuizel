@@ -256,15 +256,14 @@ const standardFilters: FFmpegFilter[] = (function() {
 export async function ffmpegFilter(
     filter: FFmpegFilterOptions, sel: select.Selection, d: ui.Dialog
 ) {
-    if (sel.els.size === 0) {
+    if (sel.tracks.length === 0) {
         // Well that was easy
         return;
     }
 
     // Get the audio tracks
-    const tracks = <audioData.AudioTrack[]> Array.from(sel.els)
-        .map(x => x.track)
-        .filter(x => x.type() === track.TrackType.Audio);
+    const tracks = <audioData.AudioTrack[]>
+        sel.tracks.filter(x => x.type() === track.TrackType.Audio);
 
     if (d)
         d.box.innerHTML = "Filtering...";
@@ -566,13 +565,13 @@ async function uiFilterGo(
 
         // Get the selection
         const sel = select.getSelection();
-        if (sel.els.size === 0) {
+        if (sel.tracks.length === 0) {
             // Nothing to do!
             return;
         }
 
         // Prepare for undo
-        Array.from(sel.els)[0].track.project.store.undoPoint();
+        sel.tracks[0].project.store.undoPoint();
 
         // And perform the filter
         await ffmpegFilter(opts, sel, d);

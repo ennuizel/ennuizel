@@ -227,7 +227,7 @@ export interface Selection {
     range: boolean;
     start: number;
     end: number;
-    els: Set<Selectable>;
+    tracks: track.Track[];
 }
 
 /**
@@ -238,7 +238,7 @@ export function getSelection(): Selection {
         range: (selectStart !== selectEnd),
         start: selectStart,
         end: selectEnd,
-        els: new Set(selectedEls)
+        tracks: selectables.filter(x => selectedEls.has(x)).map(x => x.track)
     };
 }
 
