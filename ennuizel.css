@@ -7,30 +7,13 @@
     --bg-active: #355;
     --bg-off: #333;
     --bg-plain: #111;
-    --bg-invite: #244;
     --bg-status: #ccc;
-    --bg-wave: #103030;
+    --bg-menu: #103030;
     --fg: #cff;
     --fg-status: #333;
     --border-plain: #222;
     --link-color: #fcc;
     --link-color-status: #00a;
-
-    --wave-too-soft: #333;
-    --wave-too-loud: #700;
-    --user-list-silent: #000;
-    --user-list-speaking: #2b552b;
-    --video-speaking-sel: #090;
-    --video-speaking: #5e8f52;
-    --video-silent-sel: #999;
-    --video-silent: #000;
-
-    --nopeak-1: #200;
-    --peak-1:   #800;
-    --nopeak-2: #220;
-    --peak-2:   #880;
-    --nopeak-3: #020;
-    --peak-3:   #080;
 }
 
 body {
@@ -96,7 +79,7 @@ a {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
-    background-color: var(--bg-wave);
+    background-color: var(--bg-menu);
     border-bottom: 2px solid var(--fg);
 }
 
@@ -156,7 +139,7 @@ a {
 .dialog {
     position: relative;
 
-    background-color: var(--bg-wave);
+    background-color: var(--bg-menu);
     border: 2px solid var(--fg);
     border-radius: 0.25em;
     padding: 1em;
@@ -295,7 +278,7 @@ label.ez {
     width: 128px;
     overflow: auto;
     white-space: normal;
-    background-color: var(--bg-wave);
+    background-color: var(--bg-menu);
     border: 2px solid var(--fg);
     will-change: transform;
 }
