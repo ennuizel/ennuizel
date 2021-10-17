@@ -171,7 +171,7 @@ export class AudioTrack implements track.Track {
             format: this.format,
             sampleRate: this.sampleRate,
             channels: this.channels,
-            data: []
+            data: <string[]> []
         };
         const d: AudioData[] = [];
         if (this.root)

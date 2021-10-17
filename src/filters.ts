@@ -636,7 +636,7 @@ async function uiFilter(d: ui.Dialog, filter: FFmpegFilter) {
 
             if (param.type === "number" || param.type === "text") {
                 // Support enter to submit
-                inp.addEventListener("keydown", ev => {
+                inp.addEventListener("keydown", (ev: KeyboardEvent) => {
                     if (ev.key === "Enter") {
                         ev.preventDefault();
                         doIt();

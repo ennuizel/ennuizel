@@ -106,7 +106,7 @@ import * as store from "./store";
 import * as ui from "./ui";
 
 import * as streamsaver from "streamsaver";
-import { WritableStream } from "web-streams-polyfill/ponyfill";
+import * as wsp from "web-streams-polyfill/ponyfill";
 
 (async function() {
     ui.load();
@@ -155,8 +155,8 @@ import { WritableStream } from "web-streams-polyfill/ponyfill";
             await ui.loadLibrary("localforage.min.js");
 
         // StreamSaver.js
-        streamsaver.mitm = "StreamSaver/mitm.html";
-        streamsaver.WritableStream = WritableStream;
+        (<any> streamsaver).mitm = "StreamSaver/mitm.html";
+        (<any> streamsaver).WritableStream = wsp.WritableStream;
 
         /* The technique to get persistence (which also implies larger/no
          * quota) is complicated. On Firefox, if you request persitence, it

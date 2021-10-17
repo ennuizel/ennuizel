@@ -34,7 +34,7 @@ export async function load() {
     while (libavs.length < threads) {
         const idx = libavs.length;
         libavs.push(null);
-        libavPromises.push(LibAV.LibAV().then(libav => libavs[idx] = libav));
+        libavPromises.push(LibAV.LibAV().then((libav: any) => libavs[idx] = libav));
     }
     while (users.length < threads)
         users.push(null);

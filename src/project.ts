@@ -147,7 +147,7 @@ export class Project {
         });
 
         let timeout: number = null;
-        name.oninput = ev => {
+        name.oninput = (ev: InputEvent) => {
             if (timeout !== null)
                 clearTimeout(timeout);
             timeout = setTimeout(async function() {
@@ -299,7 +299,7 @@ function uiNewProject(d: ui.Dialog) {
         let nm = ui.txt(d.box, {id: "project-name"});
         let neww = hotkeys.btn(d, "_New project");
 
-        nm.onkeydown = ev => {
+        nm.onkeydown = (ev: KeyboardEvent) => {
             if (ev.key === "Enter") {
                 ev.preventDefault();
                 doIt();
@@ -307,7 +307,7 @@ function uiNewProject(d: ui.Dialog) {
             }
         };
 
-        neww.onclick = ev => {
+        neww.onclick = () => {
             doIt();
         };
 
@@ -668,8 +668,8 @@ async function loadFile(fileName: string, raw: Blob, opts: {
                         // Send out these packets
                         let gotThis = false;
                         for (const idx in packets.value) {
-                            if (demuxerControllers[idx])
-                                demuxerControllers[idx].enqueue(packets.value[idx]);
+                            if (demuxerControllers[+idx])
+                                demuxerControllers[+idx].enqueue(packets.value[idx]);
                             if (idx === stream.index)
                                 gotThis = true;
                         }
@@ -698,7 +698,7 @@ async function loadFile(fileName: string, raw: Blob, opts: {
         const [ignore, c, pkt, frame] = await libav.ff_init_decoder(stream.codec_id, stream.codecpar);
 
         // Resampler will be made once we know our input
-        let filter_graph, buffersrc_ctx, buffersink_ctx;
+        let filter_graph: any, buffersrc_ctx: any, buffersink_ctx: any;
 
         // Make the stream
         const reader = new WSPReadableStream({

@@ -94,7 +94,7 @@ export async function addSelectable(sel: Selectable) {
     selectedEls.add(sel);
 
     // Make sure it actually is selectable
-    c.addEventListener("mousedown", ev => {
+    c.addEventListener("mousedown", (ev: MouseEvent) => {
         ev.preventDefault();
         if (document.activeElement)
             (<HTMLElement> document.activeElement).blur();
@@ -155,7 +155,7 @@ export async function addSelectable(sel: Selectable) {
         updateDisplay();
     });
 
-    c.addEventListener("mousemove", ev => {
+    c.addEventListener("mousemove", (ev: MouseEvent) => {
         if (selectAnchor === null)
             return;
 

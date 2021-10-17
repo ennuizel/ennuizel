@@ -27,6 +27,7 @@
     "web-streams-polyfill": "^3.1.1"
   },
   "devDependencies": {
+    "@types/streamsaver": "^2.0.1",
     "madge": "^5.0.1"
   }
 }

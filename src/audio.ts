@@ -109,7 +109,7 @@ export async function createSource(stream: ReadableStream, opts: {
     });
 
     // Send the first bit
-    ret.port.postMessage({c: "data", d: firstFrames.map(x => x.data)});
+    ret.port.postMessage({c: "data", d: firstFrames.map((x: any) => x.data)});
     first = firstFrames = null;
 
     // Associate its port with reading
@@ -148,7 +148,7 @@ export async function createSource(stream: ReadableStream, opts: {
                 const frames = await libav.ff_filter_multi(buffersrc_ctx, buffersink_ctx, frame, [], true);
                 ret.port.postMessage({
                     c: "data",
-                    d: frames.length ? frames.map(x => x.data) : null
+                    d: frames.length ? frames.map((x: any) => x.data) : null
                 });
 
             } else {
@@ -161,7 +161,7 @@ export async function createSource(stream: ReadableStream, opts: {
             const frames =
                 await libav.ff_filter_multi(buffersrc_ctx, buffersink_ctx,
                     frame, [rawData.value]);
-            ret.port.postMessage({c: "data", d: frames.map(x => x.data)});
+            ret.port.postMessage({c: "data", d: frames.map((x: any) => x.data)});
 
         }
     };
