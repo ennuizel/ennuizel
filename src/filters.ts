@@ -26,6 +26,23 @@ import * as track from "./track";
 import * as ui from "./ui";
 
 /**
+ * A custom (presumably non-FFmpeg) filter, provided by a plugin.
+ */
+export interface CustomFilter {
+    /**
+     * User-visible name for the filter. May include underscores for
+     * hotkeyability, but beware overlaps.
+     */
+    name: string;
+
+    /**
+     * Function to run to perform the filter *from the UI*. If you want an
+     * automated filter, expose it as part of your plugin API.
+     */
+    filter: (d: ui.Dialog) => Promise<void>;
+}
+
+/**
  * Simple name-value pair.
  */
 interface NameValuePair {
@@ -36,7 +53,7 @@ interface NameValuePair {
 /**
  * FFmpeg filter options.
  */
-export interface FFmpegFilterOptions {
+interface FFmpegFilterOptions {
     /**
      * Filter name (in FFmpeg).
      */
@@ -56,7 +73,7 @@ export interface FFmpegFilterOptions {
 /**
  * An FFmpeg filter's description, for display.
  */
-export interface FFmpegFilter {
+interface FFmpegFilter {
     /**
      * Human-readable display name.
      */
@@ -82,7 +99,7 @@ export interface FFmpegFilter {
 /**
  * A single parameter for an ffmpeg filter.
  */
-export interface FFmpegParameter {
+interface FFmpegParameter {
     /**
      * Human-readable display name.
      */
@@ -244,6 +261,11 @@ const standardFilters: FFmpegFilter[] = (function() {
 })();
 
 /**
+ * Custom filters registered by plugins.
+ */
+const customFilters: CustomFilter[] = [];
+
+/**
  * Apply an FFmpeg filter with the given options.
  * @param filter  The filter and options.
  * @param sel  The selection to filter.
@@ -252,6 +274,30 @@ const standardFilters: FFmpegFilter[] = (function() {
  */
 export async function ffmpegFilter(
     filter: FFmpegFilterOptions, sel: select.Selection, d: ui.Dialog
+) {
+    // Make the filter string
+    let fs = ""
+    if (filter.name) {
+        fs = filter.name;
+        if (filter.args.length)
+            fs += "=";
+    }
+    fs += filter.args.map(x => (x.name ? x.name + "=" : "") + x.value).join(":");
+
+    await ffmpegFilterString(fs, !!filter.changesDuration, sel, d);
+}
+
+/**
+ * Apply an FFmpeg filter, given a filter string.
+ * @param fs  The filter string.
+ * @param changesDuration  Set if this filter changes duration, so the process
+ *                         must use a temporary track.
+ * @param sel  The selection to filter.
+ * @param d  (Optional) The dialog in which to show the status, if applicable.
+ *           This dialog will *not* be closed.
+ */
+export async function ffmpegFilterString(
+    fs: string, changesDuration: boolean, sel: select.Selection, d: ui.Dialog
 ) {
     // Get the audio tracks
     const tracks = <audioData.AudioTrack[]>
@@ -264,15 +310,6 @@ export async function ffmpegFilter(
 
     if (d)
         d.box.innerHTML = "Filtering...";
-
-    // Make the filter string
-    let fs = ""
-    if (filter.name) {
-        fs = filter.name;
-        if (filter.args.length)
-            fs += "=";
-    }
-    fs += filter.args.map(x => (x.name ? x.name + "=" : "") + x.value).join(":");
 
     // Make the stream options
     const streamOpts = {
@@ -317,7 +354,7 @@ export async function ffmpegFilter(
             });
 
         // Input stream
-        const inStream = track.stream(Object.assign({keepOpen: !filter.changesDuration}, streamOpts)).getReader();
+        const inStream = track.stream(Object.assign({keepOpen: !changesDuration}, streamOpts)).getReader();
 
         // Filter stream
         const filterStream = new WSPReadableStream({
@@ -357,7 +394,7 @@ export async function ffmpegFilter(
             }
         });
 
-        if (filter.changesDuration) {
+        if (changesDuration) {
             // We have to write it to a new track, then copy it over
             const newTrack = new audioData.AudioTrack(
                 await id36.genFresh(track.project.store, "audio-track-"),
@@ -729,4 +766,12 @@ async function uiFilterGo(
     }, {
         reuse: d
     });
+}
+
+/**
+ * Register a custom filter.
+ * @param filter  The filter.
+ */
+export function registerCustomFilter(filter: CustomFilter) {
+    customFilters.push(filter);
 }

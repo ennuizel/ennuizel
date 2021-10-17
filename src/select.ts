@@ -244,6 +244,35 @@ export function getSelection(): Selection {
 }
 
 /**
+ * Set the *time* of the selection. Don't set the end time to select all time.
+ * @param start  Start time. Default 0.
+ * @param end  Optional end time.
+ */
+export async function selectTime(start: number = 0, end?: number) {
+    selectStart = start;
+    selectEnd = (typeof end === "number") ? end : start;
+    await updateDisplay();
+}
+
+/**
+ * Set the *tracks* currently selected. Does not update the time.
+ * @param tracks  Array of tracks to select. May be empty.
+ */
+export async function selectTracks(tracks: track.Track[]) {
+    // Make a set
+    const trackSet = new Set(tracks);
+
+    // Then add the right ones
+    selectedEls.clear();
+    for (const sel of selectables) {
+        if (trackSet.has(sel.track))
+            selectedEls.add(sel);
+    }
+
+    await updateDisplay();
+}
+
+/**
  * Select all selectables, and clear the range so that everything is selected.
  * @param opts  Selection options.
  */

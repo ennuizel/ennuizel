@@ -163,6 +163,44 @@ declare namespace ennuizel {
         }
     }
 
+    namespace filters {
+        /**
+         * A custom (presumably non-FFmpeg) filter, provided by a plugin.
+         */
+        interface CustomFilter {
+            /**
+             * User-visible name for the filter. May include underscores for
+             * hotkeyability, but beware overlaps.
+             */
+            name: string;
+
+            /**
+             * Function to run to perform the filter *from the UI*. If you want an
+             * automated filter, expose it as part of your plugin API.
+             */
+            filter: (d: ui.Dialog) => Promise<void>;
+        }
+
+        interface Filters {
+            /**
+             * Apply an FFmpeg filter, given a filter string.
+             * @param fs  The filter string.
+             * @param changesDuration  Set if this filter changes duration, so the process
+             *                         must use a temporary track.
+             * @param sel  The selection to filter.
+             * @param d  (Optional) The dialog in which to show the status, if applicable.
+             *           This dialog will *not* be closed.
+             */
+            ffmpegFilterString(fs: string, changesDuration: boolean, sel: select.Selection, d: ui.Dialog): Promise<void>;
+
+            /**
+             * Register a custom filter.
+             * @param filter  The filter.
+             */
+            registerCustomFilter(filter: CustomFilter): void;
+        }
+    }
+
     namespace ui {
         /**
          * A dialog box.
@@ -195,6 +233,70 @@ declare namespace ennuizel {
                 callback: (x: Dialog, y: (x: HTMLElement) => unknown) => Promise<T>,
                 opts?: DialogOptions
             ): Promise<T>;
+
+            /**
+             * Wrapper to quickly close a dialog box that's been kept open.
+             * @param d  The dialog.
+             */
+            dialogClose(d: Dialog): Promise<void>;
+
+            /**
+             * Show a loading screen while performing some task.
+             * @param callback  The callback to run while the loading screen is shown.
+             */
+            loading<T>(
+                callback: (x:Dialog) => Promise<T>, opts?: DialogOptions
+            ): Promise<T>;
+
+            /**
+             * Show an OK-only alert box.
+             * @param html  innerHTML of the dialog.
+             */
+            alert(html: string): Promise<void>;
+
+            /**
+             * Load a library.
+             * @param name  URL of the library to load.
+             */
+            loadLibrary(name: string): Promise<void>;
+        }
+    }
+
+    namespace select {
+        /**
+         * Interface for the current selection.
+         */
+        export interface Selection {
+            range: boolean;
+            start: number;
+            end: number;
+            tracks: track.Track[];
+        }
+
+        interface Select {
+            /**
+             * Get the current selection.
+             */
+            getSelection(): Selection;
+
+            /**
+             * Set the *time* of the selection. Don't set the end time to select all time.
+             * @param start  Start time. Default 0.
+             * @param end  Optional end time.
+             */
+            selectTime(start?: number, end?: number): Promise<void>;
+
+            /**
+             * Set the *tracks* currently selected. Does not update the time.
+             * @param tracks  Array of tracks to select. May be empty.
+             */
+            selectTracks(tracks: track.Track[]): Promise<void>;
+
+            /**
+             * Select all selectables, and clear the range so that everything is selected.
+             * @param opts  Selection options.
+             */
+            selectAll(opts: {tracksOnly?: boolean}): Promise<void>;
         }
     }
 
@@ -203,41 +305,91 @@ declare namespace ennuizel {
      */
     interface Plugin {
         /**
-         * Name of the plugin.
+         * Public name of the plugin.
          */
-        readonly name: string;
+        name: string;
+
+        /**
+         * API name of the plugin.
+         */
+        id: string;
 
         /**
          * URL for *information* on the plugin (not for the plugin itself)
          */
-        readonly infoURL: string;
+        infoURL: string;
 
         /**
          * A full description of the plugin, in HTML.
          */
-        readonly description: string;
+        description: string;
 
         /**
          * License information.
          */
-        readonly licenseInfo: string;
+        licenseInfo: string;
+
+        /**
+         * The plugin's URL. This is set by registerPlugin, not the plugin.
+         */
+        url?: string;
+
+        /**
+         * An optional load function to finish loading the plugin.
+         */
+        load?: () => Promise<void>;
 
         /**
          * A "wizard" (optional) to use in place of the normal Ennuizel flow.
          */
         wizard?: (d: ui.Dialog) => Promise<void>;
+
+        /**
+         * The API for your plugin itself, which other plugins can use.
+         */
+        api?: any;
     }
 
     interface Ennuizel {
+        /**
+         * Call this to register your plugin. Every plugin *must* call this.
+         * @param plugin  The plugin to register.
+         */
+        registerPlugin(plugin: Plugin): void;
+
+        /**
+         * Load a plugin by URL. Returns null if the plugin cannot be loaded.
+         * @param url  The absolute URL (protocol optional) from which to load
+         *             the plugin.
+         */
+        loadPlugin(url: string): Promise<Plugin>;
+
+        /**
+         * Get the loaded plugin with this ID, if such a plugin has been
+         * loaded.
+         * @param id  The ID of the plugin.
+         */
+        getPlugin(id: string): Plugin;
+
         /**
          * web-streams-polyfill's ReadableStream.
          */
         ReadableStream: typeof ReadableStream;
 
         /**
+         * The filter interface.
+         */
+        filters: filters.Filters;
+
+        /**
          * The UI.
          */
         ui: ui.UI;
+
+        /**
+         * Selection.
+         */
+        select: select.Select;
 
         /**
          * Create (and load) a new project with the given name.

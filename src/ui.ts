@@ -105,10 +105,10 @@ export function load() {
  * @param name  URL of the library to load.
  */
 export function loadLibrary(name: string) {
-    return new Promise((res, rej) => {
+    return new Promise<void>((res, rej) => {
         const scr = dce("script");
         scr.addEventListener("load", res);
-        scr.addEventListener("error", rej);
+        scr.addEventListener("error", (ev: ErrorEvent) => rej(new Error(ev.message)));
         scr.src = name;
         scr.async = true;
         document.body.appendChild(scr);
@@ -223,6 +223,7 @@ export async function dialog<T>(callback:
 
 /**
  * Wrapper to quickly close a dialog box that's been kept open.
+ * @param d  The dialog.
  */
 export async function dialogClose(d: Dialog) {
     await dialog(() => void 0, {reuse: d});
@@ -238,6 +239,7 @@ document.body.addEventListener("keydown", ev => {
 
 /**
  * Show a loading screen while performing some task.
+ * @param callback  The callback to run while the loading screen is shown.
  */
 export function loading<T>(callback: (x:Dialog) => Promise<T>,
     opts: DialogOptions = {}): Promise<T> {
