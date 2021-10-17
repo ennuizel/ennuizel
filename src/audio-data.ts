@@ -22,10 +22,8 @@ import * as id36 from "./id36";
 import * as select from "./select";
 import * as store from "./store";
 import * as track from "./track";
-import { EZStream, ezStreamFrom } from "./stream";
+import { WSPReadableStream, EZStream, ezStreamFrom } from "./stream";
 import * as ui from "./ui";
-
-import { ReadableStream } from "web-streams-polyfill/ponyfill";
 
 type TypedArray =
     Int8Array |
@@ -245,9 +243,10 @@ export class AudioTrack implements track.Track {
     /**
      * Append data from a stream of raw data chunks. The type of the chunks
      * must correspond to the format specified in the format field.
-     * @param stream  The stream to read from.
+     * @param rstream  The stream to read from.
      */
-    async append(stream: EZStream<TypedArray>) {
+    async append(rstream: ReadableStream<TypedArray>) {
+        const stream = new EZStream(rstream);
         const store = this.project.store;
 
         // Current AudioData we're appending to
@@ -319,7 +318,13 @@ export class AudioTrack implements track.Track {
      * @param data  The single chunk of data.
      */
     appendRaw(data: TypedArray) {
-        this.append(ezStreamFrom(data));
+        const stream = new WSPReadableStream({
+            start(controller) {
+                controller.enqueue(data);
+                controller.close();
+            }
+        });
+        this.append(stream);
     }
 
     /**
@@ -351,7 +356,7 @@ export class AudioTrack implements track.Track {
         start?: number,
         end?: number,
         keepOpen?: boolean
-    } = {}) {
+    } = {}): ReadableStream<any> {
         // Calculate times
         const startSec = (typeof opts.start === "number") ? opts.start : 0;
         const endSec = (typeof opts.end === "number") ? opts.end : this.duration() + 2;
@@ -364,7 +369,7 @@ export class AudioTrack implements track.Track {
 
         if (!sd) {
             // No data, just give an empty stream
-            return new ReadableStream({
+            return new WSPReadableStream({
                 start(controller) {
                     controller.close();
                 }
@@ -382,7 +387,7 @@ export class AudioTrack implements track.Track {
         };
 
         // Create the stream
-        return new ReadableStream({
+        return new WSPReadableStream({
             async start(controller) {
                 // Read the first part
                 let buf = await cur.openRaw();

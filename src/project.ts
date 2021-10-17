@@ -25,12 +25,10 @@ import * as hotkeys from "./hotkeys";
 import * as id36 from "./id36";
 import * as select from "./select";
 import * as store from "./store";
+import { WSPReadableStream } from "./stream";
 import * as track from "./track";
-import { EZStream } from "./stream";
 import * as ui from "./ui";
 import * as util from "./util";
-
-import { ReadableStream } from "web-streams-polyfill/ponyfill";
 
 // These buttons are disabled when no project is loaded
 const projectButtons = ["edit", "tracks", "filters"];
@@ -122,15 +120,16 @@ export class Project {
     }
 
     /**
-     * Create a new audio track and add it.
+     * Create a new audio track. The track is added to the project if it's not temporary.
      * @param opts  Options for creating the track.
      */
-    async newAudioTrack(opts: {name?: string} = {}) {
+    async newAudioTrack(opts: {name?: string, temp?: boolean} = {}) {
         const track = new audioData.AudioTrack(
             await id36.genFresh(this.store, "audio-track-"),
             this, opts
         );
-        await this.addTrack(track);
+        if (!opts.temp)
+            await this.addTrack(track);
         return track;
     }
 
@@ -191,7 +190,9 @@ export class Project {
     }
 
     /**
-     * Remove a track.
+     * Remove a track. The track is deleted even if it was never actually added
+     * to the project, so this is also the way to delete a track.
+     * @param track  The track to remove.
      */
     async removeTrack(track: track.Track) {
         await track.del();
@@ -249,7 +250,7 @@ export async function load() {
 /**
  * Get the list of projects.
  */
-async function getProjects() {
+export async function getProjects() {
     let ids: string[] = await store.store.getItem("ez-projects") || [];
     let ret: {id: string, name: string}[] = [];
     for (const id of ids) {
@@ -406,7 +407,7 @@ function uiLoadProject(d?: ui.Dialog) {
  * Load a project by ID.
  * @param id  ID of the project.
  */
-async function loadProject(id: string, store?: store.UndoableStore) {
+export async function loadProject(id: string, store?: store.UndoableStore) {
     await unloadProject();
 
     // Create and load this project
@@ -426,7 +427,7 @@ async function loadProject(id: string, store?: store.UndoableStore) {
 /**
  * Unload the current project, if one is loaded.
  */
-async function unloadProject() {
+export async function unloadProject() {
     if (project) {
         // Remove the undo info
         await project.store.dropUndo();
@@ -600,7 +601,7 @@ async function loadFile(fileName: string, raw: Blob, opts: {
     await libav.ff_reader_dev_send("tmp.in", header);
     const [fmt_ctx, streams] = await libav.ff_init_demuxer_file("tmp.in");
     const pkt = await libav.av_packet_alloc();
-    const libavReader = new ReadableStream({
+    const libavReader = new WSPReadableStream({
         async pull(controller) {
             while (true) {
                 const [res, packets] = await libav.ff_read_multi(fmt_ctx, pkt, "tmp.in", {devLimit: 1024*1024});
@@ -649,7 +650,7 @@ async function loadFile(fileName: string, raw: Blob, opts: {
 
         audioStreams.push(stream);
 
-        demuxers[stream.index] = new ReadableStream({
+        demuxers[stream.index] = new WSPReadableStream({
             start(controller) {
                 demuxerControllers[stream.index] = controller;
             },
@@ -700,7 +701,7 @@ async function loadFile(fileName: string, raw: Blob, opts: {
         let filter_graph, buffersrc_ctx, buffersink_ctx;
 
         // Make the stream
-        const reader = new EZStream(new ReadableStream({
+        const reader = new WSPReadableStream({
             async pull(controller) {
                 while (true) {
                     // Get data from the demuxer
@@ -759,7 +760,7 @@ async function loadFile(fileName: string, raw: Blob, opts: {
                     }
                 }
             }
-        }));
+        });
 
         // And start it reading
         trackPromises.push(track.append(reader));

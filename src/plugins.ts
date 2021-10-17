@@ -17,6 +17,7 @@
 /// <reference path="../ennuizel.d.ts" />
 
 import * as project from "./project";
+import { WSPReadableStream } from "./stream";
 import * as ui from "./ui";
 
 /**
@@ -24,7 +25,13 @@ import * as ui from "./ui";
  */
 export async function load() {
     Ennuizel = {
+        ReadableStream: WSPReadableStream,
+
         ui: ui,
-        newProject: project.newProject
+
+        newProject: project.newProject,
+        getProjects: project.getProjects,
+        loadProject: project.loadProject,
+        unloadProject: project.unloadProject
     };
 }

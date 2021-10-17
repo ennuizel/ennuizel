@@ -14,7 +14,10 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-import { ReadableStream } from "web-streams-polyfill/ponyfill";
+import * as wsp from "web-streams-polyfill/ponyfill";
+
+// Force WSP's ReadableStream type to overlap
+export const WSPReadableStream = <typeof ReadableStream> <unknown> wsp.ReadableStream;
 
 /**
  * A ReadableStream paired with the ability to push back data.

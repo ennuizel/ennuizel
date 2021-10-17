@@ -19,8 +19,6 @@ declare let LibAV: any;
 
 import * as ui from "./ui";
 
-import { ReadableStream } from "web-streams-polyfill/ponyfill";
-
 let ac: AudioContext = null;
 
 /**

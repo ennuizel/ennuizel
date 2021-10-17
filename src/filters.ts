@@ -22,11 +22,9 @@ import * as avthreads from "./avthreads";
 import * as hotkeys from "./hotkeys";
 import * as id36 from "./id36";
 import * as select from "./select";
-import { EZStream } from "./stream";
+import { WSPReadableStream } from "./stream";
 import * as track from "./track";
 import * as ui from "./ui";
-
-import { ReadableStream } from "web-streams-polyfill/ponyfill";
 
 /**
  * Simple name-value pair.
@@ -323,7 +321,7 @@ export async function ffmpegFilter(
         const inStream = track.stream(Object.assign({keepOpen: !filter.changesDuration}, streamOpts)).getReader();
 
         // Filter stream
-        const filterStream = new ReadableStream({
+        const filterStream = new WSPReadableStream({
             async pull(controller) {
                 while (true) {
                     // Get some data
@@ -371,7 +369,7 @@ export async function ffmpegFilter(
                 }
             );
 
-            await newTrack.append(new EZStream(filterStream));
+            await newTrack.append(filterStream);
 
             await track.replace(sel.range ? sel.start : 0, sel.range ? sel.end : Infinity, newTrack);
 
@@ -510,7 +508,7 @@ export async function mixTracks(
     let trackDoneCt = 0;
 
     // The mix stream
-    const mixStream = new ReadableStream({
+    const mixStream = new WSPReadableStream({
         async pull(controller) {
             while (true) {
                 // Get some data
@@ -554,7 +552,7 @@ export async function mixTracks(
     });
 
     // Append that to the new track
-    await outTrack.append(new EZStream(mixStream));
+    await outTrack.append(mixStream);
 
     // And get rid of the libav instance
     libav.terminate();
