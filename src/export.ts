@@ -127,7 +127,7 @@ export async function exportAudio(
     // Function to show the current status
     function showStatus() {
         if (d) {
-            let statusStr = status.map(x =>
+            const statusStr = status.map(x =>
                 x.name + ": " + Math.round(x.exported / x.duration * 100) + "%")
             .join("<br/>");
             d.box.innerHTML = "Exporting...<br/>" + statusStr;
@@ -211,19 +211,19 @@ export async function exportAudio(
         };
 
         // Prepare the encoder
-        const [codec, c, frame, pkt, frame_size] = await libav.ff_init_encoder(opts.codec, {
+        const [, c, frame, pkt, frame_size] = await libav.ff_init_encoder(opts.codec, {
             sample_fmt: opts.sampleFormat,
             sample_rate,
             channel_layout
         });
 
-        const [oc, fmt, pb, st] = await libav.ff_init_muxer(
+        const [oc] = await libav.ff_init_muxer(
             {filename: fname, format_name: opts.format, open: true, device: true},
             [[c, 1, sample_rate]]);
         await libav.avformat_write_header(oc, 0);
 
         // Prepare the filter
-        const [filter_graph, buffersrc_ctx, buffersink_ctx] =
+        const [, buffersrc_ctx, buffersink_ctx] =
             await libav.ff_init_filter_graph("anull", {
                 sample_rate: track.sampleRate,
                 sample_fmt: track.format,

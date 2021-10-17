@@ -96,7 +96,6 @@ SOFTWARE.
 // extern
 declare let LibAV: any, localforage: any;
 
-import * as audio from "./audio";
 import * as avthreads from "./avthreads";
 import * as filters from "./filters";
 import * as plugins from "./plugins";
@@ -114,7 +113,8 @@ import * as wsp from "web-streams-polyfill/ponyfill";
     // General-purpose error handler
     let errorDialog: ui.Dialog = null;
     async function onError(msg: string) {
-        let html = msg
+        const html = msg
+            // eslint-disable-next-line no-useless-escape
             .replace(/\&/g, "&nbsp;")
             .replace(/</g, "&lt;").replace(/>/g, "&gt;")
             .replace(/\n/g, "<br/>");
@@ -141,7 +141,7 @@ import * as wsp from "web-streams-polyfill/ponyfill";
         );
     });
 
-    await ui.loading(async function(d) {
+    await ui.loading(async function() {
         // Load our core libraries
 
         // libav.js

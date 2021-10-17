@@ -197,7 +197,7 @@ export async function dialog<T>(callback:
     }
 
     // Let the callback do its things
-    let ret = await callback(d, (focus) => {
+    const ret = await callback(d, (focus) => {
         d.wrapper.style.display = "flex";
         if (focus)
             focus.focus();
@@ -225,7 +225,7 @@ export async function dialog<T>(callback:
  * Wrapper to quickly close a dialog box that's been kept open.
  */
 export async function dialogClose(d: Dialog) {
-    await dialog(async function() {}, {reuse: d});
+    await dialog(() => void 0, {reuse: d});
 }
 
 // Handle closing with escape

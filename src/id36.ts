@@ -20,7 +20,7 @@ import * as store from "./store";
  * Generate a random ID.
  * @param len  Length of the ID to generate.
  */
-export function gen(len: number = 12) {
+export function gen(len = 12) {
     let ret = "";
     while (ret.length < len)
         ret += Math.random().toString(36).slice(2);
@@ -33,7 +33,7 @@ export function gen(len: number = 12) {
  * @param prefix  Prefix for the item in the store.
  * @param len  Length of the ID.
  */
-export async function genFresh(store: store.Store, prefix: string = "", len: number = 12) {
+export async function genFresh(store: store.Store, prefix = "", len = 12) {
     while (true) {
         const id = gen(len);
         if ((await store.getItem(prefix + id)) === null)

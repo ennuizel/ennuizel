@@ -25,32 +25,30 @@ let ac: AudioContext = null;
  * Get the audio context.
  */
 export async function getAudioContext() {
-    let isNew = false
     if (!ac) {
         ac = new AudioContext();
-        isNew = true;
-    }
 
-    // Make sure it's running
-    if (ac.state !== "running") {
-        // First try to do it directly
-        try {
-            await ac.resume();
-        } catch (ex) {}
-    }
-
-    if (ac.state !== "running") {
-        // OK, ask nicely
-        await ui.alert("This tool needs permission to play audio. Press OK to grant this permission.");
-        try {
-            await ac.resume();
-        } catch (ex) {
-            await ui.alert(ex + "");
+        // Make sure it's running
+        if (ac.state !== "running") {
+            // First try to do it directly
+            try {
+                await ac.resume();
+            } catch (ex) {}
         }
-    }
 
-    // Load in the AWP
-    await ac.audioWorklet.addModule("awp/ennuizel-player.js");
+        if (ac.state !== "running") {
+            // OK, ask nicely
+            await ui.alert("This tool needs permission to play audio. Press OK to grant this permission.");
+            try {
+                await ac.resume();
+            } catch (ex) {
+                await ui.alert(ex + "");
+            }
+        }
+
+        // Load in the AWP
+        await ac.audioWorklet.addModule("awp/ennuizel-player.js");
+    }
 
     return ac;
 }
@@ -76,7 +74,9 @@ export async function createSource(stream: ReadableStream, opts: {
             opts.ready();
         return {
             node: ac.createBufferSource(),
+            // eslint-disable-next-line @typescript-eslint/no-empty-function
             start: ()=>{},
+            // eslint-disable-next-line @typescript-eslint/no-empty-function
             stop: ()=>{}
         };
     }
@@ -84,7 +84,7 @@ export async function createSource(stream: ReadableStream, opts: {
     // Create the filter
     const libav = await LibAV.LibAV();
     const frame = await libav.av_frame_alloc();
-    const [filter_graph, buffersrc_ctx, buffersink_ctx] =
+    const [, buffersrc_ctx, buffersink_ctx] =
         await libav.ff_init_filter_graph("anull", {
             sample_rate: first.value.sample_rate,
             sample_fmt: first.value.format,

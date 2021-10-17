@@ -15,7 +15,6 @@
  */
 
 import * as status from "./status";
-import * as ui from "./ui";
 
 import * as bytes from "bytes";
 
@@ -152,8 +151,8 @@ export class UndoableStore extends Store {
             return;
         await this.undoStorePromise;
 
-        let undo: any;
-        while (undo = this.undos.pop()) {
+        while (this.undos.length) {
+            const undo = this.undos.pop();
             if (undo.c === "undo") {
                 // An undo point, we're done
                 break;

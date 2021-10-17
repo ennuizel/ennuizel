@@ -17,8 +17,6 @@
 // extern
 declare let LibAV: any;
 
-import * as ui from "./ui";
-
 const threads = navigator.hardwareConcurrency ? navigator.hardwareConcurrency * 2 : 8;
 
 // Multiple parallel libav instances

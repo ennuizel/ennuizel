@@ -72,7 +72,7 @@ let activeSelectingRange = false;
 /**
  * The current selected selectable(s).
  */
-let selectedEls: Set<Selectable> = new Set();
+const selectedEls: Set<Selectable> = new Set();
 
 /**
  * The play head, only visible while playing audio.
@@ -194,7 +194,7 @@ export async function addSelectable(sel: Selectable) {
 }
 
 // When we lift the mouse *anywhere*, unanchor
-document.body.addEventListener("mouseup", ev => {
+document.body.addEventListener("mouseup", () => {
     if (selectAnchor !== null)
         selectAnchor = null;
 });

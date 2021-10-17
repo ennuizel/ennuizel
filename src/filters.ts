@@ -18,7 +18,6 @@
 declare let LibAV: any;
 
 import * as audioData from "./audio-data";
-import * as avthreads from "./avthreads";
 import * as hotkeys from "./hotkeys";
 import * as id36 from "./id36";
 import * as select from "./select";
@@ -291,7 +290,7 @@ export async function ffmpegFilter(
     // Function to show the current status
     function showStatus() {
         if (d) {
-            let statusStr = status.map(x =>
+            const statusStr = status.map(x =>
                 x.name + ": " + Math.round(x.filtered / x.duration * 100) + "%")
             .join("<br/>");
             d.box.innerHTML = "Filtering...<br/>" + statusStr;
@@ -306,7 +305,7 @@ export async function ffmpegFilter(
         // Make the filter thread
         const channelLayout = (track.channels === 1) ? 4 : ((1<<track.channels)-1);
         const frame = await libav.av_frame_alloc();
-        const [filter_graph, buffersrc_ctx, buffersink_ctx] =
+        const [, buffersrc_ctx, buffersink_ctx] =
             await libav.ff_init_filter_graph(fs, {
                 sample_rate: track.sampleRate,
                 sample_fmt: track.format,
@@ -442,9 +441,9 @@ export async function mixTracks(
     let mtracks = tracks.map((x, idx) => "aud" + idx);
     while (mtracks.length > 16) {
         // Mix them in groups of 16
-        let otracks: string[] = [];
+        const otracks: string[] = [];
         for (let i = 0; i < mtracks.length; i += 16) {
-            let gtracks = mtracks.slice(i, i + 16);
+            const gtracks = mtracks.slice(i, i + 16);
             fs += ";" + gtracks.map(x => "[" + x + "]").join("") +
                   "amix=" + gtracks.length + "[aud" + otracks.length + "]";
             otracks.push("aud" + otracks.length);
@@ -489,7 +488,7 @@ export async function mixTracks(
 
     // Make the filter
     const frame = await libav.av_frame_alloc();
-    const [filter_graph, buffersrc_ctx, buffersink_ctx] =
+    const [, buffersrc_ctx, buffersink_ctx] =
         await libav.ff_init_filter_graph(fs, tracks.map(x => ({
             sample_rate: x.sampleRate,
             sample_fmt: x.format,
@@ -504,7 +503,7 @@ export async function mixTracks(
     const inStreams = tracks.map(x => x.stream(streamOpts).getReader());
 
     // Remember which tracks are done
-    const trackDone = tracks.map(x => false);
+    const trackDone = tracks.map(() => false);
     let trackDoneCt = 0;
 
     // The mix stream
@@ -595,7 +594,7 @@ async function uiFilter(d: ui.Dialog, filter: FFmpegFilter) {
         for (const param of filter.params) {
             const id = "ez-filter-param-" + filter.ffName + "-" + param.ffName;
             const div = ui.mk("div", d.box, {className: "row"});
-            const lbl = hotkeys.mk(d, param.name + ":&nbsp;",
+            hotkeys.mk(d, param.name + ":&nbsp;",
                 lbl => ui.lbl(div, id, lbl, {className: "ez"}));
             const inp = pels[param.ffName] = ui.mk("input", div, {
                 id,
@@ -675,7 +674,7 @@ async function uiFilterGo(
         // Convert the parameter elements into arguments
         const args: NameValuePair[] = [];
         for (const param of filter.params) {
-            let val: string = "";
+            let val = "";
 
             // Get out the value
             switch (param.type) {

@@ -22,7 +22,7 @@ import * as id36 from "./id36";
 import * as select from "./select";
 import * as store from "./store";
 import * as track from "./track";
-import { WSPReadableStream, EZStream, ezStreamFrom } from "./stream";
+import { WSPReadableStream, EZStream } from "./stream";
 import * as ui from "./ui";
 
 type TypedArray =
@@ -253,7 +253,7 @@ export class AudioTrack implements track.Track {
         let cur: AudioData = null, raw: TypedArray;
 
         let chunk: TypedArray;
-        while (chunk = await stream.read()) {
+        while ((chunk = await stream.read()) !== null) {
             if (!cur) {
                 // Append a new audio chunk to the tree
                 if (!this.root) {
@@ -423,7 +423,7 @@ export class AudioTrack implements track.Track {
                 } else {
                     // Have to move up the tree
                     while (true) {
-                        let next = cur.parent;
+                        const next = cur.parent;
                         if (!next) {
                             controller.close();
                             return;
@@ -653,7 +653,7 @@ export class AudioTrack implements track.Track {
 
             } else {
                 while (true) {
-                    let next = cur.parent;
+                    const next = cur.parent;
                     if (!next) {
                         cur = null;
                         break;
@@ -860,7 +860,7 @@ export class AudioData {
      */
     rebalance(): AudioData {
         // Convert the whole tree to an array
-        let tarr: AudioData[] = [];
+        const tarr: AudioData[] = [];
         this.fillArray(tarr);
 
         // Then turn the array back into a tree
@@ -887,8 +887,8 @@ export class AudioData {
             return null;
 
         // Find the middle node
-        let mid = ~~(arr.length / 2);
-        let root = arr[mid];
+        const mid = ~~(arr.length / 2);
+        const root = arr[mid];
         root.parent = null;
 
         // Sort out its left
@@ -985,7 +985,6 @@ export class AudioData {
 
         await avthreads.enqueueSync(async function(libav) {
             // Decompress it. First, read it all in.
-            let buf: TypedArray = null;
             const wavpack = await self.track.project.store.getItem("audio-data-compressed-" + self.id);
             if (!wavpack) {
                 // Whoops, make it up!
@@ -996,8 +995,8 @@ export class AudioData {
             const fn = "tmp-" + self.id + ".wv"
             await libav.writeFile(fn, wavpack);
             const [fmt_ctx, [stream]] = await libav.ff_init_demuxer_file(fn);
-            const [ignore, c, pkt, frame] = await libav.ff_init_decoder(stream.codec_id, stream.codecpar);
-            const [read_res, packets] = await libav.ff_read_multi(fmt_ctx, pkt);
+            const [, c, pkt, frame] = await libav.ff_init_decoder(stream.codec_id, stream.codecpar);
+            const [, packets] = await libav.ff_read_multi(fmt_ctx, pkt);
             const frames = await libav.ff_decode_multi(c, pkt, frame, packets[stream.index], true);
 
             // Then convert it to a non-planar format
@@ -1057,7 +1056,7 @@ export class AudioData {
      * closes, the data is compressed and rendered.
      * @param modified  Set to true if you've modified the data.
      */
-    async closeRaw(modified: boolean = false) {
+    async closeRaw(modified = false) {
         this.rawModified = this.rawModified || modified;
 
         if (--this.readers <= 0) {
@@ -1086,12 +1085,12 @@ export class AudioData {
         const channel_layout = (track.channels === 1) ? 4 : ((1 << track.channels) - 1);
 
         // Prepare the encoder
-        const [codec, c, frame, pkt, frame_size] = await libav.ff_init_encoder("wavpack", {
+        const [, c, frame, pkt, frame_size] = await libav.ff_init_encoder("wavpack", {
             sample_fmt: toFormat,
             sample_rate: track.sampleRate,
             channel_layout
         });
-        const [oc, fmt, pb, st] =
+        const [oc, , pb] =
             await libav.ff_init_muxer({filename: this.id + ".wv", open: true},
                 [[c, 1, track.sampleRate]]);
         await libav.avformat_write_header(oc, 0);

@@ -87,9 +87,11 @@ export class Project {
 
         this.tracks = [];
         for (const [trackType, trackId] of p.tracks) {
-            const track = new audioData.AudioTrack(trackId, this);
-            await track.load();
-            this.addTrack(track);
+            if (trackType !== track.TrackType.Audio)
+                throw new Error("Unrecognized track type " + trackType);
+            const atrack = new audioData.AudioTrack(trackId, this);
+            await atrack.load();
+            this.addTrack(atrack);
         }
     }
 
@@ -171,7 +173,7 @@ export class Project {
                 };
 
                 yes.onclick = () => {
-                    ui.loading(async function(d) {
+                    ui.loading(async function() {
                         await project.store.undoPoint();
                         await self.removeTrack(track);
                     }, {
@@ -251,8 +253,8 @@ export async function load() {
  * Get the list of projects.
  */
 export async function getProjects() {
-    let ids: string[] = await store.store.getItem("ez-projects") || [];
-    let ret: {id: string, name: string}[] = [];
+    const ids: string[] = await store.store.getItem("ez-projects") || [];
+    const ret: {id: string, name: string}[] = [];
     for (const id of ids) {
         const project: any = await store.store.getItem("ez-project-" + id);
         if (project)
@@ -296,8 +298,8 @@ function projectMenu() {
 function uiNewProject(d: ui.Dialog) {
     ui.dialog(async function(d, show) {
         ui.lbl(d.box, "project-name", "Project name:&nbsp;");
-        let nm = ui.txt(d.box, {id: "project-name"});
-        let neww = hotkeys.btn(d, "_New project");
+        const nm = ui.txt(d.box, {id: "project-name"});
+        const neww = hotkeys.btn(d, "_New project");
 
         nm.onkeydown = (ev: KeyboardEvent) => {
             if (ev.key === "Enter") {
@@ -319,7 +321,7 @@ function uiNewProject(d: ui.Dialog) {
                 return;
             }
 
-            await ui.loading(async function(ld) {
+            await ui.loading(async function() {
                 await unloadProject();
 
                 const name = nm.value.trim();
@@ -388,7 +390,7 @@ function uiLoadProject(d?: ui.Dialog) {
             if (!first)
                 first = btn;
             btn.onclick = async function() {
-                await ui.loading(async function(ld) {
+                await ui.loading(async function() {
                     await loadProject(project.id);
                 }, {
                     reuse: d
@@ -492,7 +494,7 @@ function editMenu() {
  * Perform an undo.
  */
 async function performUndo() {
-    await ui.loading(async function(d) {
+    await ui.loading(async function() {
         await project.store.undo();
         await reloadProject();
     });
@@ -529,7 +531,7 @@ function tracksMenu() {
  */
 function uiLoadFile(d: ui.Dialog) {
     ui.dialog(async function(d, show) {
-        const lbl = ui.lbl(d.box, "load-file", "Audio file:&nbsp;");
+        ui.lbl(d.box, "load-file", "Audio file:&nbsp;");
         const file = ui.mk("input", d.box, {id: "load-file", type: "file"});
 
         file.onchange = async function() {
@@ -695,7 +697,7 @@ async function loadFile(fileName: string, raw: Blob, opts: {
         audioTracks[stream.index] = track;
 
         // Make the decoder
-        const [ignore, c, pkt, frame] = await libav.ff_init_decoder(stream.codec_id, stream.codecpar);
+        const [, c, pkt, frame] = await libav.ff_init_decoder(stream.codec_id, stream.codecpar);
 
         // Resampler will be made once we know our input
         let filter_graph: any, buffersrc_ctx: any, buffersink_ctx: any;
@@ -829,7 +831,7 @@ function uiDeleteProject(d: ui.Dialog) {
         });
 
         if (yes) {
-            await ui.loading(async function(d) {
+            await ui.loading(async function() {
                 await project.del();
             }, {
                 reuse: d
@@ -850,7 +852,7 @@ let stopPlayback: () => unknown = null;
  */
 export async function play() {
     // Override stopPlayback during loading
-    stopPlayback = () => {};
+    stopPlayback = () => void 0;
 
     await ui.loading(async function() {
         // Make sure to get the AudioContext first so it's on the event
@@ -860,7 +862,7 @@ export async function play() {
         const sel = select.getSelection();
 
         // Make our stream options from the selection
-        let streamOpts: any = {
+        const streamOpts: any = {
             start: sel.start
         };
         if (sel.range)

@@ -17,8 +17,8 @@
 import * as ui from "./ui";
 
 // Current status items
-let statusKeys: string[] = [];
-let statusItems: Record<string, string> = Object.create(null);
+const statusKeys: string[] = [];
+const statusItems: Record<string, string> = Object.create(null);
 
 /**
  * Add a status item.
@@ -48,7 +48,7 @@ export function popStatus(key: string) {
 // Update the status bar
 function updateStatus() {
     // Make the full text
-    let cont: string[] = [];
+    const cont: string[] = [];
     for (const key of statusKeys)
         cont.push(statusItems[key]);
     if (cont.length === 0)

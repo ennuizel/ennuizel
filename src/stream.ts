@@ -94,7 +94,7 @@ export class EZStream<R> {
 
 // Create an EZStream from a single item
 export function ezStreamFrom<R>(x: R): EZStream<R> {
-    let ret = new EZStream<R>(null);
+    const ret = new EZStream<R>(null);
     ret.push(x);
     return ret;
 }
