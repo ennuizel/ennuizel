@@ -99,6 +99,7 @@ declare let LibAV: any, localforage: any;
 import * as audio from "./audio";
 import * as avthreads from "./avthreads";
 import * as filters from "./filters";
+import * as plugins from "./plugins";
 import * as project from "./project";
 import * as select from "./select";
 import * as store from "./store";
@@ -109,6 +110,37 @@ import { WritableStream } from "web-streams-polyfill/ponyfill";
 
 (async function() {
     ui.load();
+
+    // General-purpose error handler
+    let errorDialog: ui.Dialog = null;
+    async function onError(msg: string) {
+        let html = msg
+            .replace(/\&/g, "&nbsp;")
+            .replace(/</g, "&lt;").replace(/>/g, "&gt;")
+            .replace(/\n/g, "<br/>");
+
+        ui.dialog(async function(d, show) {
+            errorDialog = d;
+            d.box.innerHTML = html;
+            show(null);
+        }, {
+            reuse: errorDialog,
+            closeable: false,
+            keepOpen: true
+        });
+    }
+
+    window.addEventListener("error", ev => {
+        onError(ev.message + " @ " + ev.filename + ":" + ev.lineno);
+    });
+    window.addEventListener("unhandledrejection", ev => {
+        onError(
+            (typeof ev.reason === "object" && ev.reason !== null && ev.reason.stack) ?
+            ("" + ev.reason + "\n" + ev.reason.stack) :
+            ("" + ev.reason)
+        );
+    });
+
     await ui.loading(async function(d) {
         // Load our core libraries
 
@@ -160,36 +192,8 @@ import { WritableStream } from "web-streams-polyfill/ponyfill";
         await select.load();
         await store.load();
 
-    });
+        await plugins.load();
 
-    // Now handle errors
-    let errorDialog: ui.Dialog = null;
-    async function onError(msg: string) {
-        let html = msg
-            .replace(/\&/g, "&nbsp;")
-            .replace(/</g, "&lt;").replace(/>/g, "&gt;")
-            .replace(/\n/g, "<br/>");
-
-        ui.dialog(async function(d, show) {
-            errorDialog = d;
-            d.box.innerHTML = html;
-            show(null);
-        }, {
-            reuse: errorDialog,
-            closeable: false,
-            keepOpen: true
-        });
-    }
-
-    window.addEventListener("error", ev => {
-        onError(ev.message + " @ " + ev.filename + ":" + ev.lineno);
-    });
-    window.addEventListener("unhandledrejection", ev => {
-        onError(
-            (typeof ev.reason === "object" && ev.reason !== null && ev.reason.stack) ?
-            ("" + ev.reason + "\n" + ev.reason.stack) :
-            ("" + ev.reason)
-        );
     });
 
     // And make an about screen

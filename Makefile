@@ -4,7 +4,7 @@ all: \
 	localforage.min.js StreamSaver/mitm.html StreamSaver/sw.js \
 	ennuizel.js awp/ennuizel-player.js
 
-ennuizel.js: node_modules/.bin/browserify src/*.ts
+ennuizel.js: node_modules/.bin/browserify src/*.ts *.d.ts
 	./src/build.js > $@.tmp
 	mv $@.tmp $@
 

@@ -96,6 +96,32 @@ export class Project {
     }
 
     /**
+     * Delete this project.
+     */
+    async del() {
+        // First drop the stores
+        await this.store.dropUndo();
+        await this.store.dropInstance({name: "ez-project-" + this.id});
+
+        // Then drop the ref in the main store
+        await store.store.removeItem("ez-project-" + project.id);
+
+        // Then drop it from the projects list
+        const projects: string[] = await store.store.getItem("ez-projects") || [];
+        const idx = projects.indexOf(this.id);
+        if (idx >= 0) {
+            projects.splice(idx, 1);
+            await store.store.setItem("ez-projects", projects);
+        }
+
+        // Then drop it from the live interface
+        if (project === this) {
+            project = null;
+            await unloadProject();
+        }
+    }
+
+    /**
      * Create a new audio track and add it.
      * @param opts  Options for creating the track.
      */
@@ -328,7 +354,7 @@ function uiNewProject(d: ui.Dialog) {
  * Create a new project.
  * @param name  Name for the project.
  */
-async function newProject(name: string) {
+export async function newProject(name: string) {
     await unloadProject();
 
     // Create this project
@@ -803,7 +829,7 @@ function uiDeleteProject(d: ui.Dialog) {
 
         if (yes) {
             await ui.loading(async function(d) {
-                await deleteProject();
+                await project.del();
             }, {
                 reuse: d
             });
@@ -811,30 +837,6 @@ function uiDeleteProject(d: ui.Dialog) {
     }, {
         reuse: d
     });
-}
-
-/**
- * Delete a project.
- */
-async function deleteProject() {
-    // First drop the stores
-    await project.store.dropUndo();
-    await project.store.dropInstance({name: "ez-project-" + project.id});
-
-    // Then drop the ref in the main store
-    await store.store.removeItem("ez-project-" + project.id);
-
-    // Then drop it from the projects list
-    const projects: string[] = await store.store.getItem("ez-projects") || [];
-    const idx = projects.indexOf(project.id);
-    if (idx >= 0) {
-        projects.splice(idx, 1);
-        await store.store.setItem("ez-projects", projects);
-    }
-
-    // Then drop it from the live interface
-    project = null;
-    await unloadProject();
 }
 
 /**

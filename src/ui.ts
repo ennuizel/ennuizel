@@ -145,7 +145,8 @@ export interface DialogOptions {
 }
 
 /**
- * Create a dialog box. Closes after the promise resolves.
+ * Create a dialog box. If it's not closeable by the user, will close
+ * automatically after the callback finishes.
  * @param callback  Function to call with the dialog box.
  * @param opts  Other options.
  */

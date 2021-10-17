@@ -21,7 +21,7 @@ process.argv.slice(2).forEach((arg) => {
  
 if (minify)
     process.stdout.write(fs.readFileSync("src/license.js", "utf8"));
-browserify({standalone: "Ennuizel"})
+browserify({standalone: "EnnuizelApp"})
     .add("src/main.ts")
     .plugin(tsify, { noImplicitAny, files: [] })
     .plugin(minify ? tinyify : browserPackFlat)
