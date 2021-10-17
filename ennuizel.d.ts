@@ -220,6 +220,55 @@ declare namespace ennuizel {
         }
 
         /**
+         * UI-related support for hotkeys.
+         */
+        interface Hotkeys {
+            /**
+             * Register a hotkey.
+             * @param el  The element to click when the hotkey is pressed.
+             * @param dialog  The dialog that the hotkey element is contained in, or null
+             *                if it's not in a dialog.
+             * @param key  The hot key itself.
+             */
+            registerHotkey(el: HTMLElement, dialog: ui.Dialog, key: string): void;
+
+            /**
+             * Unregister an element's hotkey.
+             * @param el  The element.
+             */
+            unregisterHotkey(el: HTMLElement): void;
+
+            /**
+             * Make an element hotkeyable.
+             * @param parent  The dialog that the element will be placed in (but note that
+             *                it's the caller's job to place the element).
+             * @param lbl  The label to be hotkey-ified. Will be passed back to the
+             *             callback without its _.
+             * @param callback  The function to actually create the element, and presumably
+             *                  add it to the DOM (though you're free to do that later).
+             */
+            mk<T extends HTMLElement>(parent: ui.Dialog, lbl: string, callback: (lbl: string) => T): T;
+
+            /**
+             * Make a button with a hotkey.
+             * @param parent  The dialog to place the button in.
+             * @param lbl  The label for the button, including an _ before the letter
+             *             representing the hotkey.
+             * @param opts  Other options.
+             */
+            btn(parent: ui.Dialog, lbl: string, opts?: any): any;
+
+            /**
+             * Make a <label/> with a hotkey.
+             * @param parent  The dialog to place the label in.
+             * @param htmlFor  ID of the element that this label corresponds to.
+             * @param lbl  Text of the label.
+             * @param opts  Other options.
+             */
+            lbl(parent: ui.Dialog, htmlFor: string, lbl: string, opts?: any): any;
+        }
+
+        /**
          * The UI API.
          */
         interface UI {
@@ -259,6 +308,31 @@ declare namespace ennuizel {
              * @param name  URL of the library to load.
              */
             loadLibrary(name: string): Promise<void>;
+
+            /**
+             * Make an element.
+             * @param el  Element type.
+             * @param parent  Element to add it to.
+             * @param opts  Attributes to set.
+             */
+            mk(el: string, parent: HTMLElement, opts?: any): any;
+
+            /**
+             * Make a <button/>
+             * @param parent  Element to add it to.
+             * @param innerHTML  Text of the button.
+             * @param opts  Other options.
+             */
+            btn(parent: HTMLElement, innerHTML: string, opts?: any): any;
+
+            /**
+             * Make a <label/>
+             * @param parent  Element to add it to.
+             * @param htmlFor  ID of the element this label corresponds to.
+             * @param innerHTML  Text of the label.
+             * @param opts  Other options.
+             */
+            lbl(parent: HTMLElement, htmlFor: string, innerHTML: string, opts?: any): any;
         }
     }
 
@@ -380,6 +454,11 @@ declare namespace ennuizel {
          * The filter interface.
          */
         filters: filters.Filters;
+
+        /**
+         * Hotkey interactions.
+         */
+        hotkeys: ui.Hotkeys;
 
         /**
          * The UI.

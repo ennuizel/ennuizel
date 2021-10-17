@@ -611,6 +611,12 @@ async function filterMenu() {
             b.onclick = () => uiFilter(d, filter);
         }
 
+        // And for each filter in the custom list
+        for (const filter of customFilters) {
+            const b = hotkeys.btn(d, filter.name, {className: "row small"});
+            b.onclick = () => filter.filter(d);
+        }
+
         show(first);
     }, {
         closeable: true

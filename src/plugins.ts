@@ -18,6 +18,7 @@
 /// <reference path="../ennuizel.d.ts" />
 
 import * as filters from "./filters";
+import * as hotkeys from "./hotkeys";
 import * as project from "./project";
 import * as select from "./select";
 import { WSPReadableStream } from "./stream";
@@ -47,6 +48,7 @@ export async function load() {
         ReadableStream: WSPReadableStream,
 
         filters,
+        hotkeys,
         ui,
         select,
 
