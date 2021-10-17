@@ -194,6 +194,21 @@ import * as wsp from "web-streams-polyfill/ponyfill";
 
         await plugins.load();
 
+        // Load any plugins specified by the configuration file
+        let wizard: (d: ui.Dialog) => Promise<void> = null;
+        try {
+            const response = await fetch("ennuizel.json", {
+                cache: "no-cache"
+            });
+            const config = await response.json();
+            for (const url of <string[]> config.plugins) {
+                const plugin = await plugins.loadPlugin(url);
+                if (plugin && plugin.wizard)
+                    wizard = plugin.wizard;
+            }
+        } catch (ex) {
+            console.error(ex);
+        }
     });
 
     // And make an about screen
