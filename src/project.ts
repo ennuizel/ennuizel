@@ -99,20 +99,11 @@ export class Project {
      * Delete this project.
      */
     async del() {
-        // First drop the stores
+        // First drop the undo store
         await this.store.dropUndo();
-        await this.store.dropInstance({name: "ez-project-" + this.id});
 
-        // Then drop the ref in the main store
-        await store.store.removeItem("ez-project-" + project.id);
-
-        // Then drop it from the projects list
-        const projects: string[] = await store.store.getItem("ez-projects") || [];
-        const idx = projects.indexOf(this.id);
-        if (idx >= 0) {
-            projects.splice(idx, 1);
-            await store.store.setItem("ez-projects", projects);
-        }
+        // Then delete it
+        await deleteProjectById(this.id);
 
         // Then drop it from the live interface
         if (project === this) {
@@ -457,6 +448,28 @@ async function reloadProject() {
     project = null;
     await unloadProject();
     await loadProject(id, store);
+}
+
+
+/**
+ * Delete a project by ID. You can delete the *current* project with
+ * its del() method.
+ * @param id  ID of the project to delete.
+ */
+export async function deleteProjectById(id: string) {
+    // First drop the store
+    await store.store.dropInstance({name: "ez-project-" + id});
+
+    // Then drop the ref in the main store
+    await store.store.removeItem("ez-project-" + project.id);
+
+    // Then drop it from the projects list
+    const projects: string[] = await store.store.getItem("ez-projects") || [];
+    const idx = projects.indexOf(id);
+    if (idx >= 0) {
+        projects.splice(idx, 1);
+        await store.store.setItem("ez-projects", projects);
+    }
 }
 
 /**

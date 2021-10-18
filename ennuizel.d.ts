@@ -509,6 +509,13 @@ declare namespace ennuizel {
          * Unload the current project from the user interface.
          */
         unloadProject(): Promise<void>;
+
+        /**
+         * Delete a project by ID. You can delete the *current* project with
+         * its del() method.
+         * @param id  ID of the project to delete.
+         */
+        deleteProjectById(id: string): Promise<void>;
     }
 }
 

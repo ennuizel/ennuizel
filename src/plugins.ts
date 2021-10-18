@@ -60,7 +60,8 @@ export async function load() {
         newProject: project.newProject,
         getProjects: project.getProjects,
         loadProject: project.loadProject,
-        unloadProject: project.unloadProject
+        unloadProject: project.unloadProject,
+        deleteProjectById: project.deleteProjectById
     };
 }
 
