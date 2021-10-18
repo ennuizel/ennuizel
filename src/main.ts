@@ -14,6 +14,9 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference
+/// <reference path="../ennuizel.d.ts" />
+
 // License info (for the about box)
 const licenseInfo =
 `
@@ -96,7 +99,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 `;
 
-
 // extern
 declare let LibAV: any, localforage: any;
 
@@ -110,6 +112,18 @@ import * as ui from "./ui";
 
 import * as streamsaver from "streamsaver";
 import * as wsp from "web-streams-polyfill/ponyfill";
+
+/* Ennuizel itself, as interpreted as a plugin, to make the about box easier to
+ * fill */
+const ennuizelPlugin: ennuizel.Plugin = {
+    name: "Ennuizel",
+    id: "ennuizel",
+    infoURL: "https://github.com/ennuizel/ennuizel",
+
+    description: 'This is Ennuizel, an audio editor in your web browser! Ennuizel is not “cloud”-based: everything is saved locally in your browser\'s local storage space. Ennuizel is <a href="https://github.com/ennuizel/ennuizel">open source</a>.',
+
+    licenseInfo
+};
 
 (async function() {
     ui.load();
@@ -217,33 +231,65 @@ import * as wsp from "web-streams-polyfill/ponyfill";
 
     // And make an about screen
     ui.ui.menu.about.onclick = () => {
+        const plugs = plugins.getPlugins();
+        if (plugs.length === 0) {
+            // No plugins, just show the help for Ennuizel itself
+            about(null, ennuizelPlugin);
+            return;
+        }
+
+        // Make a dialog to ask which plugin they're querying
         ui.dialog(async function(d, show) {
-            const about = ui.mk("div", d.box, {
-                innerHTML: 'This is Ennuizel, an audio editor in your web browser! Ennuizel is not “cloud”-based: everything is saved locally in your browser\'s local storage space. Ennuizel is <a href="https://github.com/Yahweasel/ennuizel">open source</a>.<br/><br/>License info:'
-            });
-            about.style.maxWidth = "45rem";
+            const ez = ui.btn(d.box, "About Ennuizel", {className: "row small"});
+            ez.onclick = () => about(d, ennuizelPlugin);
 
-            const li = ui.mk("textarea", d.box, {
-                readOnly: true,
-                innerHTML: licenseInfo,
-                className: "row"
-            });
-            Object.assign(li.style, {
-                display: "block",
-                width: "45rem",
-                height: "20em"
-            });
+            for (const plug of plugs) {
+                const btn = ui.btn(d.box, "About " + plug.name, {className: "row small"});
+                btn.onclick = () => about(d, plug);
+            }
 
-            const ok = ui.btn(d.box, "OK", {className: "row"});
-            ok.style.width = "45rem";
-            ok.onclick = () => ui.dialogClose(d);
-
-            show(ok);
+            show(ez);
         }, {
             closeable: true
         });
     };
 
 })();
+
+// Handler for "about" screens
+function about(d: ui.Dialog, plugin: ennuizel.Plugin) {
+    ui.dialog(async function(d, show) {
+        const header = ui.mk("h2", d.box);
+        const headerA = ui.mk("a", header, {
+            href: plugin.infoURL,
+            innerText: plugin.name
+        });
+
+        const about = ui.mk("div", d.box, {
+            innerHTML: plugin.description + "<br/><br/>License info:"
+        });
+        about.style.maxWidth = "45rem";
+
+        const li = ui.mk("textarea", d.box, {
+            readOnly: true,
+            innerHTML: plugin.licenseInfo,
+            className: "row"
+        });
+        Object.assign(li.style, {
+            display: "block",
+            width: "45rem",
+            height: "20em"
+        });
+
+        const ok = ui.btn(d.box, "OK", {className: "row"});
+        ok.style.width = "45rem";
+        ok.onclick = () => ui.dialogClose(d);
+
+        show(ok);
+    }, {
+        closeable: true,
+        reuse: d
+    });
+}
 
 export {ui, project};

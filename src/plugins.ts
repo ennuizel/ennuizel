@@ -133,10 +133,20 @@ export async function loadPlugin(url: string, opts: {
 }
 
 /**
+ * Get all loaded plugins.
+ */
+export function getPlugins(): ennuizel.Plugin[] {
+    const ret: ennuizel.Plugin[] = [];
+    for (const id in plugins)
+        ret.push(plugins[id]);
+    return ret;
+}
+
+/**
  * Get the loaded plugin with this ID, if such a plugin has been
  * loaded.
  * @param id  The ID of the plugin.
  */
-function getPlugin(id: string) {
+function getPlugin(id: string): ennuizel.Plugin {
     return plugins[id] || null;
 }
