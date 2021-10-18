@@ -74,6 +74,7 @@ export class UndoableStore extends Store {
         })();
         this.undos = [];
         this.ct = 0;
+        this.noUndo = noUndo;
     }
 
     /**
@@ -87,7 +88,7 @@ export class UndoableStore extends Store {
      * Set this as an undo point (i.e., if you undo, you'll undo to here)
      */
     undoPoint() {
-        if (!noUndo)
+        if (!noUndo && !this.noUndo)
             this.undos.push({c: "undo"});
     }
 
@@ -102,6 +103,14 @@ export class UndoableStore extends Store {
     }
 
     /**
+     * Disable undoing.
+     */
+    async disableUndo() {
+        await this.dropUndo();
+        this.noUndo = true;
+    }
+
+    /**
      * Set an item and remember the undo steps.
      */
     async setItem(name: string, value: any): Promise<any> {
@@ -109,7 +118,7 @@ export class UndoableStore extends Store {
         const orig = await this.getItem(name);
 
         // Make the undo
-        if (!noUndo) {
+        if (!noUndo && !this.noUndo) {
             await this.undoStorePromise;
             if (orig !== null) {
                 const ct = this.ct++;
@@ -132,7 +141,7 @@ export class UndoableStore extends Store {
         const orig = await this.getItem(name);
 
         // Make the undo
-        if (!noUndo && orig !== null) {
+        if (!noUndo && !this.noUndo && orig !== null) {
             await this.undoStorePromise;
             const ct = this.ct++;
             await this.undoStore.setItem(ct + "", orig);
@@ -147,7 +156,7 @@ export class UndoableStore extends Store {
      * Perform an undo.
      */
     async undo() {
-        if (noUndo)
+        if (noUndo || this.noUndo)
             return;
         await this.undoStorePromise;
 
@@ -187,6 +196,11 @@ export class UndoableStore extends Store {
      * A counter for unique undo "names".
      */
     ct: number;
+
+    /**
+     * Set to disable undo.
+     */
+    noUndo: boolean;
 }
 
 /**

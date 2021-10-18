@@ -62,7 +62,8 @@ export async function load() {
         loadProject: project.loadProject,
         unloadProject: project.unloadProject,
         deleteProjectById: project.deleteProjectById,
-        undoPoint: project.undoPoint
+        undoPoint: project.undoPoint,
+        disableUndo: project.disableUndo
     };
 }
 

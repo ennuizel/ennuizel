@@ -26,9 +26,9 @@ import * as ui from "./ui";
 import * as streamsaver from "streamsaver";
 
 /**
- * Base options for exporting.
+ * Format options for exporting.
  */
-interface ExportOptionsBase {
+export interface ExportOptionsBase {
     /**
      * File format for export.
      */
@@ -78,7 +78,7 @@ export interface ExportOptions extends ExportOptionsBase {
 /**
  * Standard export formats.
  */
-const standardExports: {name: string, options: ExportOptionsBase}[] = [
+export const standardExports: {name: string, options: ExportOptionsBase}[] = [
     {name: "_FLAC", options: {format: "flac", codec: "flac", sampleFormat: audioData.LibAVSampleFormat.S32}},
     {name: "_M4A (MPEG-4 audio)", options: {format: "ipod", ext: "m4a", codec: "aac", sampleFormat: audioData.LibAVSampleFormat.FLTP}},
     {name: "Ogg _Vorbis", options: {format: "ogg", codec: "libvorbis", sampleFormat: audioData.LibAVSampleFormat.FLTP}},

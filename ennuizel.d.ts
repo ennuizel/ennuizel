@@ -536,6 +536,11 @@ declare namespace ennuizel {
          * here. Should be done at any *UI* interaction that changes data.
          */
         undoPoint(): void;
+
+        /**
+         * Disable undo for the currently loaded project.
+         */
+        disableUndo(): Promise<void>;
     }
 }
 

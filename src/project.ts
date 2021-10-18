@@ -512,6 +512,14 @@ export function undoPoint() {
 }
 
 /**
+ * Disable undo for the currently loaded project.
+ */
+export async function disableUndo() {
+    if (project)
+        await project.store.disableUndo();
+}
+
+/**
  * Perform an undo.
  */
 async function performUndo() {
