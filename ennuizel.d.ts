@@ -530,6 +530,12 @@ declare namespace ennuizel {
          * @param id  ID of the project to delete.
          */
         deleteProjectById(id: string): Promise<void>;
+
+        /**
+         * Mark this as an undo point. If an undo is performed, it will stop
+         * here. Should be done at any *UI* interaction that changes data.
+         */
+        undoPoint(): void;
     }
 }
 

@@ -504,6 +504,14 @@ function editMenu() {
 }
 
 /**
+ * Mark this as an undo point.
+ */
+export function undoPoint() {
+    if (project)
+        project.store.undoPoint();
+}
+
+/**
  * Perform an undo.
  */
 async function performUndo() {
