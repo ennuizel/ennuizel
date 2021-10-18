@@ -18,6 +18,7 @@
 /// <reference path="../ennuizel.d.ts" />
 
 import * as audioData from "./audio-data";
+import * as exportt from "./export";
 import * as filters from "./filters";
 import * as hotkeys from "./hotkeys";
 import * as project from "./project";
@@ -63,7 +64,10 @@ export async function load() {
         unloadProject: project.unloadProject,
         deleteProjectById: project.deleteProjectById,
         undoPoint: project.undoPoint,
-        disableUndo: project.disableUndo
+        disableUndo: project.disableUndo,
+
+        standardExports: exportt.standardExports,
+        exportAudio: exportt.exportAudio
     };
 }
 

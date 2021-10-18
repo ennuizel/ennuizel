@@ -208,6 +208,59 @@ declare namespace ennuizel {
         }
     }
 
+    // Named with two t's since "export" is reserved
+    namespace exportt {
+        /**
+         * Format options for exporting.
+         */
+        interface ExportOptionsBase {
+            /**
+             * File format for export.
+             */
+            format: string;
+
+            /**
+             * Codec, in libav terms.
+             */
+            codec: string;
+
+            /**
+             * Sample format, in libav terms.
+             */
+            sampleFormat: number;
+
+            /**
+             * Sample rate, if not variable.
+             */
+            sampleRate?: number;
+
+            /**
+             * Filename extension, if not the same as format.
+             */
+            ext?: string;
+        }
+
+        /**
+         * Per-export options for exporting.
+         */
+        interface ExportOptions extends ExportOptionsBase {
+            /**
+             * Filename prefix.
+             */
+            prefix: string;
+
+            /**
+             * Export all audio on selected tracks, not just selected audio.
+             */
+            allAudio?: boolean;
+
+            /**
+             * Export with the track name suffixed, even if only exporting one track.
+             */
+            suffixTrackName?: boolean;
+        }
+    }
+
     namespace ui {
         /**
          * A dialog box.
@@ -541,6 +594,20 @@ declare namespace ennuizel {
          * Disable undo for the currently loaded project.
          */
         disableUndo(): Promise<void>;
+
+        /**
+         * Standard export formats.
+         */
+        readonly standardExports: {name: string, options: exportt.ExportOptionsBase}[];
+
+        /**
+         * Export selected audio with the given options.
+         * @param opts  Export options.
+         * @param sel  The selection to export.
+         * @param d  A dialog in which to show progress, if desired.
+         */
+        exportAudio(opts: exportt.ExportOptions, sel: select.Selection, d: ui.Dialog):
+        Promise<void>;
     }
 }
 
