@@ -219,7 +219,7 @@ declare namespace ennuizel {
         /**
          * Options for opening a dialog.
          */
-        export interface DialogOptions {
+        interface DialogOptions {
             reuse?: Dialog;
             closeable?: boolean;
             keepOpen?: boolean;
@@ -347,7 +347,7 @@ declare namespace ennuizel {
         /**
          * Interface for the current selection.
          */
-        export interface Selection {
+        interface Selection {
             range: boolean;
             start: number;
             end: number;
