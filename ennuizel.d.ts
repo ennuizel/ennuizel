@@ -84,6 +84,24 @@ declare namespace ennuizel {
             readonly name: string;
         }
 
+        /**
+         * libav's sample formats.
+         */
+        enum LibAVSampleFormat {
+            U8 = 0,
+            S16 = 1,
+            S32 = 2,
+            FLT = 3,
+            DBL = 4,
+            U8P = 5,
+            S16P = 6,
+            S32P = 7,
+            FLTP = 8,
+            DBLP = 9,
+            S64 = 10,
+            S64P = 11
+        }
+
         interface AudioTrack extends Track {
             /**
              * Append data from a stream of raw data chunks. The type of the chunks

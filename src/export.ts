@@ -79,13 +79,13 @@ export interface ExportOptions extends ExportOptionsBase {
  * Standard export formats.
  */
 const standardExports: {name: string, options: ExportOptionsBase}[] = [
-    {name: "_FLAC", options: {format: "flac", codec: "flac", sampleFormat: 2 /* S32 */}},
-    {name: "_M4A (MPEG-4 audio)", options: {format: "ipod", ext: "m4a", codec: "aac", sampleFormat: 8 /* FLTP */}},
-    {name: "Ogg _Vorbis", options: {format: "ogg", codec: "libvorbis", sampleFormat: 8 /* FLTP */}},
-    {name: "_Opus", options: {format: "ogg", ext: "opus", codec: "libopus", sampleFormat: 3 /* FLT */, sampleRate: 48000}},
-    {name: "_ALAC (Apple Lossless)", options: {format: "ipod", ext: "m4a", codec: "alac", sampleFormat: 7 /* S32P */}},
-    {name: "wav_pack", options: {format: "wavpack", ext: "wv", codec: "wavpack", sampleFormat: 8 /* FLTP */}},
-    {name: "_wav", options: {format: "wav", codec: "pcm_s16le", sampleFormat: 1 /* S16 */}}
+    {name: "_FLAC", options: {format: "flac", codec: "flac", sampleFormat: audioData.LibAVSampleFormat.S32}},
+    {name: "_M4A (MPEG-4 audio)", options: {format: "ipod", ext: "m4a", codec: "aac", sampleFormat: audioData.LibAVSampleFormat.FLTP}},
+    {name: "Ogg _Vorbis", options: {format: "ogg", codec: "libvorbis", sampleFormat: audioData.LibAVSampleFormat.FLTP}},
+    {name: "_Opus", options: {format: "ogg", ext: "opus", codec: "libopus", sampleFormat: audioData.LibAVSampleFormat.FLT, sampleRate: 48000}},
+    {name: "_ALAC (Apple Lossless)", options: {format: "ipod", ext: "m4a", codec: "alac", sampleFormat: audioData.LibAVSampleFormat.S32P}},
+    {name: "wav_pack", options: {format: "wavpack", ext: "wv", codec: "wavpack", sampleFormat: audioData.LibAVSampleFormat.FLTP}},
+    {name: "_wav", options: {format: "wav", codec: "pcm_s16le", sampleFormat: audioData.LibAVSampleFormat.S16}}
 ];
 
 /**

@@ -504,7 +504,7 @@ export async function mixTracks(
         tracks[0].project, {
             name: "Mix",
             sampleRate: Math.max.apply(Math, tracks.map(x => x.sampleRate)),
-            format: 3 /* FLT */,
+            format: audioData.LibAVSampleFormat.FLT,
             channels: Math.max.apply(Math, tracks.map(x => x.channels))
         }
     );

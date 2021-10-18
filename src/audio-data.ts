@@ -25,6 +25,7 @@ import * as track from "./track";
 import { WSPReadableStream, EZStream } from "./stream";
 import * as ui from "./ui";
 
+// Generalization of typed arrays
 type TypedArray =
     Int8Array |
     Uint8Array |
@@ -35,45 +36,40 @@ type TypedArray =
     Float32Array |
     Float64Array;
 
-const log2 = Math.log(2);
-
-// libav instance used for audio data encoding
-let libav: any = null;
-
-async function loadLibAV() {
-    if (!libav) {
-        // This instance is only used for constants (quite silly)
-        libav = await LibAV.LibAV();
-        libav.terminate();
-    }
+/**
+ * libav's sample formats.
+ */
+export enum LibAVSampleFormat {
+    U8 = 0, S16, S32, FLT, DBL, U8P, S16P, S32P, FLTP, DBLP, S64, S64P
 }
+
+const log2 = Math.log(2);
 
 /**
  * Convert a (libav) format to its planar equivalent.
  * @param format  The input format, which may or may not be planar.
  */
 export async function toPlanar(format: number): Promise<number> {
-    await loadLibAV();
     switch (format) {
-        case libav.AV_SAMPLE_FMT_U8:
-        case libav.AV_SAMPLE_FMT_U8P:
-            return libav.AV_SAMPLE_FMT_U8P;
+        case LibAVSampleFormat.U8:
+        case LibAVSampleFormat.U8P:
+            return LibAVSampleFormat.U8P;
 
-        case libav.AV_SAMPLE_FMT_S16:
-        case libav.AV_SAMPLE_FMT_S16P:
-            return libav.AV_SAMPLE_FMT_S16P;
+        case LibAVSampleFormat.S16:
+        case LibAVSampleFormat.S16P:
+            return LibAVSampleFormat.S16P;
 
-        case libav.AV_SAMPLE_FMT_S32:
-        case libav.AV_SAMPLE_FMT_S32P:
-            return libav.AV_SAMPLE_FMT_S32P;
+        case LibAVSampleFormat.S32:
+        case LibAVSampleFormat.S32P:
+            return LibAVSampleFormat.S32P;
 
-        case libav.AV_SAMPLE_FMT_FLT:
-        case libav.AV_SAMPLE_FMT_FLTP:
-            return libav.AV_SAMPLE_FMT_FLTP;
+        case LibAVSampleFormat.FLT:
+        case LibAVSampleFormat.FLTP:
+            return LibAVSampleFormat.FLTP;
 
-        case libav.AV_SAMPLE_FMT_DBL:
-        case libav.AV_SAMPLE_FMT_DBLP:
-            return libav.AV_SAMPLE_FMT_DBLP;
+        case LibAVSampleFormat.DBL:
+        case LibAVSampleFormat.DBLP:
+            return LibAVSampleFormat.DBLP;
 
         default:
             throw new Error("Unsupported format (to planar) " + format);
@@ -85,27 +81,26 @@ export async function toPlanar(format: number): Promise<number> {
  * @param format  The input format, which may or may not be planar.
  */
 export async function fromPlanar(format: number): Promise<number> {
-    await loadLibAV();
     switch (format) {
-        case libav.AV_SAMPLE_FMT_U8:
-        case libav.AV_SAMPLE_FMT_U8P:
-            return libav.AV_SAMPLE_FMT_U8;
+        case LibAVSampleFormat.U8:
+        case LibAVSampleFormat.U8P:
+            return LibAVSampleFormat.U8;
 
-        case libav.AV_SAMPLE_FMT_S16:
-        case libav.AV_SAMPLE_FMT_S16P:
-            return libav.AV_SAMPLE_FMT_S16;
+        case LibAVSampleFormat.S16:
+        case LibAVSampleFormat.S16P:
+            return LibAVSampleFormat.S16;
 
-        case libav.AV_SAMPLE_FMT_S32:
-        case libav.AV_SAMPLE_FMT_S32P:
-            return libav.AV_SAMPLE_FMT_S32;
+        case LibAVSampleFormat.S32:
+        case LibAVSampleFormat.S32P:
+            return LibAVSampleFormat.S32;
 
-        case libav.AV_SAMPLE_FMT_FLT:
-        case libav.AV_SAMPLE_FMT_FLTP:
-            return libav.AV_SAMPLE_FMT_FLT;
+        case LibAVSampleFormat.FLT:
+        case LibAVSampleFormat.FLTP:
+            return LibAVSampleFormat.FLT;
 
-        case libav.AV_SAMPLE_FMT_DBL:
-        case libav.AV_SAMPLE_FMT_DBLP:
-            return libav.AV_SAMPLE_FMT_DBL;
+        case LibAVSampleFormat.DBL:
+        case LibAVSampleFormat.DBLP:
+            return LibAVSampleFormat.DBL;
 
         default:
             throw new Error("Unsupported format (to planar) " + format);
@@ -991,7 +986,6 @@ export class AudioData {
                 rframes = [{data: new Float32Array(0)}];
                 return;
             }
-            await loadLibAV();
             const fn = "tmp-" + self.id + ".wv"
             await libav.writeFile(fn, wavpack);
             const [fmt_ctx, [stream]] = await libav.ff_init_demuxer_file(fn);

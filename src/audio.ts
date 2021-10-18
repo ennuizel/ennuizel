@@ -17,6 +17,7 @@
 // extern
 declare let LibAV: any;
 
+import * as audioData from "./audio-data";
 import * as ui from "./ui";
 
 let ac: AudioContext = null;
@@ -91,7 +92,7 @@ export async function createSource(stream: ReadableStream, opts: {
             channel_layout: first.value.channel_layout
         }, {
             sample_rate: ac.sampleRate,
-            sample_fmt: 8 /* FLTP */,
+            sample_fmt: audioData.LibAVSampleFormat.FLTP,
             channel_layout: 3
         });
     let finished = false;
