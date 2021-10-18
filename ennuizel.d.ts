@@ -63,13 +63,6 @@ declare namespace ennuizel {
 
     namespace track {
         /**
-         * All supported track types.
-         */
-        enum TrackType {
-            Audio = 1
-        }
-
-        /**
          * A unifying track type for all tracks.
          */
         interface Track {
@@ -82,24 +75,6 @@ declare namespace ennuizel {
              * The name for this track.
              */
             readonly name: string;
-        }
-
-        /**
-         * libav's sample formats.
-         */
-        enum LibAVSampleFormat {
-            U8 = 0,
-            S16 = 1,
-            S32 = 2,
-            FLT = 3,
-            DBL = 4,
-            U8P = 5,
-            S16P = 6,
-            S32P = 7,
-            FLTP = 8,
-            DBLP = 9,
-            S64 = 10,
-            S64P = 11
         }
 
         interface AudioTrack extends Track {
@@ -466,27 +441,52 @@ declare namespace ennuizel {
         /**
          * web-streams-polyfill's ReadableStream.
          */
-        ReadableStream: typeof ReadableStream;
+        readonly ReadableStream: typeof ReadableStream;
 
         /**
          * The filter interface.
          */
-        filters: filters.Filters;
+        readonly filters: filters.Filters;
 
         /**
          * Hotkey interactions.
          */
-        hotkeys: ui.Hotkeys;
+        readonly hotkeys: ui.Hotkeys;
 
         /**
          * The UI.
          */
-        ui: ui.UI;
+        readonly ui: ui.UI;
 
         /**
          * Selection.
          */
-        select: select.Select;
+        readonly select: select.Select;
+
+        /**
+         * All supported track types.
+         */
+        readonly TrackType: {
+            readonly Audio: number
+        };
+
+        /**
+         * libav's sample formats.
+         */
+        readonly LibAVSampleFormat: {
+            readonly U8: number,
+            readonly S16: number,
+            readonly S32: number,
+            readonly FLT: number,
+            readonly DBL: number,
+            readonly U8P: number,
+            readonly S16P: number,
+            readonly S32P: number,
+            readonly FLTP: number,
+            readonly DBLP: number,
+            readonly S64: number,
+            readonly S64P: number
+        };
 
         /**
          * Create (and load) a new project with the given name.

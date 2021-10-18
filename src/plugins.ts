@@ -17,11 +17,13 @@
 // eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="../ennuizel.d.ts" />
 
+import * as audioData from "./audio-data";
 import * as filters from "./filters";
 import * as hotkeys from "./hotkeys";
 import * as project from "./project";
 import * as select from "./select";
 import { WSPReadableStream } from "./stream";
+import * as track from "./track";
 import * as ui from "./ui";
 
 // If we have user-defined plugins, say so
@@ -51,6 +53,9 @@ export async function load() {
         hotkeys,
         ui,
         select,
+
+        TrackType: track.TrackType,
+        LibAVSampleFormat: audioData.LibAVSampleFormat,
 
         newProject: project.newProject,
         getProjects: project.getProjects,
