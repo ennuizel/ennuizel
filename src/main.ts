@@ -159,7 +159,7 @@ const ennuizelPlugin: ennuizel.Plugin = {
         );
     });
 
-    await ui.loading(async function() {
+    await ui.loading(async function(d) {
         // Load our core libraries
 
         // libav.js
@@ -227,6 +227,10 @@ const ennuizelPlugin: ennuizel.Plugin = {
         } catch (ex) {
             console.error(ex);
         }
+
+        // Run any wizard
+        if (wizard)
+            await wizard(d);
     });
 
     // And make an about screen
