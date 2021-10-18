@@ -14,9 +14,6 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-// extern
-declare let LibAV: any;
-
 import * as avthreads from "./avthreads";
 import * as id36 from "./id36";
 import * as select from "./select";

@@ -30,7 +30,7 @@ import * as ui from "./ui";
 export let haveUserDefinedPlugins = false;
 
 // All loaded plugins
-let plugins: Record<string, ennuizel.Plugin> = Object.create(null);
+const plugins: Record<string, ennuizel.Plugin> = Object.create(null);
 
 // The URL of the plugin currently being loaded
 let currentPluginURL: string = null;
@@ -91,8 +91,8 @@ export async function loadPlugin(url: string, opts: {
         url = "https://" + url;
 
     // In case this is nested, remember the previous registration
-    let prevPlugin = registeredPlugin;
-    let prevURL = currentPluginURL;
+    const prevPlugin = registeredPlugin;
+    const prevURL = currentPluginURL;
     currentPluginURL = url;
 
     // Force the cache on the script to refresh
@@ -112,7 +112,7 @@ export async function loadPlugin(url: string, opts: {
     }
 
     // Get the plugin
-    let ret = registeredPlugin;
+    const ret = registeredPlugin;
     registeredPlugin = prevPlugin;
     currentPluginURL = prevURL;
 

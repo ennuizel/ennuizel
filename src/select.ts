@@ -248,7 +248,7 @@ export function getSelection(): Selection {
  * @param start  Start time. Default 0.
  * @param end  Optional end time.
  */
-export async function selectTime(start: number = 0, end?: number) {
+export async function selectTime(start = 0, end?: number) {
     selectStart = start;
     selectEnd = (typeof end === "number") ? end : start;
     await updateDisplay();

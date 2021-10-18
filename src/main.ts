@@ -264,7 +264,7 @@ const ennuizelPlugin: ennuizel.Plugin = {
 function about(d: ui.Dialog, plugin: ennuizel.Plugin) {
     ui.dialog(async function(d, show) {
         const header = ui.mk("h2", d.box);
-        const headerA = ui.mk("a", header, {
+        ui.mk("a", header, {
             href: plugin.infoURL,
             innerText: plugin.name
         });
