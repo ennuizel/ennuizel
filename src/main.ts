@@ -17,6 +17,10 @@
 // License info (for the about box)
 const licenseInfo =
 `
+The licenses below cover software which is compiled into ennuizel.js. For other
+included software, consult the licenses in their files.
+
+
 ===
 Ennuizel
 ===
