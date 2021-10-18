@@ -191,6 +191,20 @@ declare namespace ennuizel {
              * @param filter  The filter.
              */
             registerCustomFilter(filter: CustomFilter): void;
+
+            /**
+             * Mix the selected tracks into a new track.
+             * @param sel  The selection to mix.
+             * @param d  (Optional) The dialog in which to show the status, if applicable.
+             *           This dialog will *not* be closed.
+             * @param opts  Other options.
+             */
+            mixTracks(
+                sel: select.Selection, d: ui.Dialog, opts?: {
+                    preFilter?: string,
+                    postFilter?: string
+                }
+            ): Promise<track.Track>;
         }
     }
 
