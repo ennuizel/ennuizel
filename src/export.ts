@@ -84,7 +84,7 @@ export const standardExports: {name: string, options: ExportOptionsBase}[] = [
     {name: "Ogg _Vorbis", options: {format: "ogg", codec: "libvorbis", sampleFormat: audioData.LibAVSampleFormat.FLTP}},
     {name: "_Opus", options: {format: "ogg", ext: "opus", codec: "libopus", sampleFormat: audioData.LibAVSampleFormat.FLT, sampleRate: 48000}},
     {name: "_ALAC (Apple Lossless)", options: {format: "ipod", ext: "m4a", codec: "alac", sampleFormat: audioData.LibAVSampleFormat.S32P}},
-    {name: "wav_pack", options: {format: "wavpack", ext: "wv", codec: "wavpack", sampleFormat: audioData.LibAVSampleFormat.FLTP}},
+    {name: "wav_pack", options: {format: "wv", codec: "wavpack", sampleFormat: audioData.LibAVSampleFormat.FLTP}},
     {name: "_wav", options: {format: "wav", codec: "pcm_s16le", sampleFormat: audioData.LibAVSampleFormat.S16}}
 ];
 
