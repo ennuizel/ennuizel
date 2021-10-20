@@ -135,7 +135,6 @@ export async function exportAudio(
     }
 
     // Delete any existing export info
-    /*
     {
         const keys = await store.keys();
         for (const key of keys) {
@@ -143,7 +142,6 @@ export async function exportAudio(
                 await store.removeItem(key);
         }
     }
-    */
 
     // The export function for each track
     async function exportThread(track: audioData.AudioTrack, idx: number) {

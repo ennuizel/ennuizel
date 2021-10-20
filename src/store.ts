@@ -56,6 +56,10 @@ export class Store {
         await updateIndicator();
         return ret;
     }
+
+    async keys() {
+        return await this.localForage.keys();
+    }
 }
 
 /**
