@@ -444,7 +444,7 @@ declare namespace ennuizel {
              * Select all selectables, and clear the range so that everything is selected.
              * @param opts  Selection options.
              */
-            selectAll(opts: {tracksOnly?: boolean}): Promise<void>;
+            selectAll(opts?: {tracksOnly?: boolean}): Promise<void>;
         }
     }
 
