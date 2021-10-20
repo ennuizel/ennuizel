@@ -274,7 +274,9 @@ export async function exportAudio(
         }
 
         // Get our output writer
-        const writer = streamsaver.createWriteStream(fname).getWriter();
+        const writer = streamsaver
+            .createWriteStream(fname, {size: fileLen})
+            .getWriter();
 
         // And stream it out
         const lastNum = ~~(fileLen / bufLen);
