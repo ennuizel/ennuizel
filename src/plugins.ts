@@ -58,6 +58,9 @@ export async function load() {
         TrackType: track.TrackType,
         LibAVSampleFormat: audioData.LibAVSampleFormat,
 
+        toPlanar: audioData.toPlanar,
+        fromPlanar: audioData.fromPlanar,
+
         newProject: project.newProject,
         getProjects: project.getProjects,
         loadProject: project.loadProject,

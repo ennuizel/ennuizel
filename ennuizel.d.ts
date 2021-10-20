@@ -556,6 +556,18 @@ declare namespace ennuizel {
         };
 
         /**
+         * Convert a (libav) format to its planar equivalent.
+         * @param format  The input format, which may or may not be planar.
+         */
+        toPlanar(format: number): number;
+
+        /**
+         * Convert a (libav) format to its non-planar equivalent.
+         * @param format  The input format, which may or may not be planar.
+         */
+        fromPlanar(format: number): number;
+
+        /**
          * Create (and load) a new project with the given name.
          * @param name  Name for the project.
          */

@@ -46,7 +46,7 @@ const log2 = Math.log(2);
  * Convert a (libav) format to its planar equivalent.
  * @param format  The input format, which may or may not be planar.
  */
-export async function toPlanar(format: number): Promise<number> {
+export function toPlanar(format: number): number {
     switch (format) {
         case LibAVSampleFormat.U8:
         case LibAVSampleFormat.U8P:
@@ -77,7 +77,7 @@ export async function toPlanar(format: number): Promise<number> {
  * Convert a (libav) format to its non-planar equivalent.
  * @param format  The input format, which may or may not be planar.
  */
-export async function fromPlanar(format: number): Promise<number> {
+export function fromPlanar(format: number): number {
     switch (format) {
         case LibAVSampleFormat.U8:
         case LibAVSampleFormat.U8P:
@@ -991,7 +991,7 @@ export class AudioData {
             const frames = await libav.ff_decode_multi(c, pkt, frame, packets[stream.index], true);
 
             // Then convert it to a non-planar format
-            const toFormat = await fromPlanar(frames[0].format);
+            const toFormat = fromPlanar(frames[0].format);
             const [filter_graph, buffersrc_ctx, buffersink_ctx] =
                 await libav.ff_init_filter_graph("anull", {
                     sample_rate: frames[0].sample_rate,
@@ -1072,7 +1072,7 @@ export class AudioData {
     // wavpack-compress this data
     private async wavpack(libav: any, raw: TypedArray) {
         const track = this.track;
-        const toFormat = await toPlanar(track.format);
+        const toFormat = toPlanar(track.format);
         const channel_layout = (track.channels === 1) ? 4 : ((1 << track.channels) - 1);
 
         // Prepare the encoder

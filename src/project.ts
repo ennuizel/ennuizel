@@ -744,7 +744,7 @@ async function loadFile(fileName: string, raw: Blob, opts: {
                     if (frames.length) {
                         // Possibly make the resampler
                         if (!filter_graph) {
-                            track.format = await audioData.fromPlanar(frames[0].format);
+                            track.format = audioData.fromPlanar(frames[0].format);
                             track.sampleRate = frames[0].sample_rate;
                             track.channels = frames[0].channels;
                             const channel_layout = (track.channels === 1) ? 4 : ((1 << track.channels) - 1);
