@@ -309,14 +309,14 @@ export class AudioTrack implements track.Track {
      * Append a single chunk of raw data.
      * @param data  The single chunk of data.
      */
-    appendRaw(data: TypedArray) {
+    async appendRaw(data: TypedArray) {
         const stream = new WSPReadableStream({
             start(controller) {
                 controller.enqueue(data);
                 controller.close();
             }
         });
-        this.append(stream);
+        await this.append(stream);
     }
 
     /**

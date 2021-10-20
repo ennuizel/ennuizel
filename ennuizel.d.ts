@@ -95,7 +95,7 @@ declare namespace ennuizel {
              * Append a single chunk of raw data.
              * @param data  The single chunk of data.
              */
-            appendRaw(data: TypedArray): void;
+            appendRaw(data: TypedArray): Promise<void>;
 
             /**
              * Get the duration, in seconds, of this track.
