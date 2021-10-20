@@ -261,6 +261,20 @@ declare namespace ennuizel {
         }
     }
 
+    namespace util {
+        /**
+         * Utility functions.
+         */
+        interface Util {
+            /**
+             * Convert a time in seconds to a string timestamp.
+             * @param s  The time.
+             * @param min  Show only the fields needed.
+             */
+            timestamp(s: number, min?: boolean): string;
+        }
+    }
+
     namespace ui {
         /**
          * A dialog box.
@@ -514,6 +528,11 @@ declare namespace ennuizel {
          * The filter interface.
          */
         readonly filters: filters.Filters;
+
+        /**
+         * Utility functions.
+         */
+        readonly util: util.Util;
 
         /**
          * Hotkey interactions.

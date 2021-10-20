@@ -26,6 +26,7 @@ import * as select from "./select";
 import { WSPReadableStream } from "./stream";
 import * as track from "./track";
 import * as ui from "./ui";
+import * as util from "./util";
 
 // If we have user-defined plugins, say so
 export let haveUserDefinedPlugins = false;
@@ -51,6 +52,7 @@ export async function load() {
         ReadableStream: WSPReadableStream,
 
         filters,
+        util,
         hotkeys,
         ui,
         select,
