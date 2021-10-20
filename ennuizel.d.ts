@@ -54,6 +54,12 @@ declare namespace ennuizel {
         newAudioTrack(opts?: {name?: string, temp?: boolean}): Promise<track.AudioTrack>;
 
         /**
+         * Add a track that's already been created.
+         * @param track  The track to add.
+         */
+        addTrack(track: track.Track): Promise<void>;
+
+        /**
          * Remove a track. The track is deleted even if it was never actually added
          * to the project, so this is also the way to delete a track.
          * @param track  The track to remove.
@@ -193,7 +199,8 @@ declare namespace ennuizel {
             registerCustomFilter(filter: CustomFilter): void;
 
             /**
-             * Mix the selected tracks into a new track.
+             * Mix the selected tracks into a new track. Note that the track is
+             * *not* automatically added to the project.
              * @param sel  The selection to mix.
              * @param d  (Optional) The dialog in which to show the status, if applicable.
              *           This dialog will *not* be closed.
