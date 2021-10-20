@@ -461,7 +461,7 @@ export async function deleteProjectById(id: string) {
     await store.store.dropInstance({name: "ez-project-" + id});
 
     // Then drop the ref in the main store
-    await store.store.removeItem("ez-project-" + project.id);
+    await store.store.removeItem("ez-project-" + id);
 
     // Then drop it from the projects list
     const projects: string[] = await store.store.getItem("ez-projects") || [];
