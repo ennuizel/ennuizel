@@ -25,7 +25,7 @@ import * as hotkeys from "./hotkeys";
 import * as id36 from "./id36";
 import * as select from "./select";
 import * as store from "./store";
-import { WSPReadableStream } from "./stream";
+import { EZStream, WSPReadableStream } from "./stream";
 import * as track from "./track";
 import * as ui from "./ui";
 import * as util from "./util";
@@ -767,7 +767,7 @@ async function loadFile(fileName: string, raw: Blob, opts: {
                                 buffersink_ctx, frame, frames, packets.done);
 
                         for (const frame of rframes)
-                            controller.enqueue(frame.data);
+                            controller.enqueue(frame);
 
                         // Tell the host
                         if (opts.status) {
@@ -794,7 +794,7 @@ async function loadFile(fileName: string, raw: Blob, opts: {
         });
 
         // And start it reading
-        trackPromises.push(track.append(reader));
+        trackPromises.push(track.append(new EZStream(reader)));
     }
 
     // Now wait for all the tracks

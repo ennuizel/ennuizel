@@ -28,6 +28,81 @@ declare namespace ennuizel {
                       Int32Array | Uint32Array | Float32Array | Float64Array;
 
     /**
+     * The frame format given by libav.js
+     */
+    interface LibAVFrame {
+        /**
+         * The actual data. Note that in real libav.js frames, this could be an
+         * array of typed arrays, if it's planar, but Ennuizel only handles
+         * non-planar data.
+         */
+        data: TypedArray;
+
+        /**
+         * The sample rate.
+         */
+        sample_rate: number;
+
+        /**
+         * The sample format.
+         */
+        format: number;
+
+        /**
+         * The number of channels. Either this or channel_layout should be set.
+         */
+        channels?: number;
+
+        /**
+         * The layout of the channels. Either this or channels should be set.
+         */
+        channel_layout?: number;
+
+        /**
+         * The number of samples. This does not have to be set, and can be divined
+         * from the length of data.
+         */
+        nb_samples?: number;
+
+        /**
+         * Not part of original libav.js, but provided by streams for tracks.
+         */
+        node?: unknown;
+    }
+
+    /**
+     * A ReadableStream paired with the ability to push back data. Use
+     * Ennuizel.EZStream, not ennuizel.EZStream.
+     */
+    class EZStream<R> {
+        /**
+         * Create an EZStream.
+         * @param readableStream  The underlying ReadableStream.
+         */
+        constructor(readableStream: ReadableStream<R>);
+
+        /**
+         * Read an element. Returns null if the stream has ended.
+         */
+        read(): Promise<R>;
+
+        /**
+         * Cancel the stream.
+         */
+        cancel(): void;
+
+        /**
+         * Push this chunk back. It will be returned eagerly by the next read.
+         */
+        push(chunk: R): void;
+
+        /**
+         * Is this stream finished?
+         */
+        isDone(): boolean;
+    }
+
+    /**
      * An Ennuizel project. Only one project can be loaded at a time, so there
      * should only ever be one instance of this type at a time.
      */
@@ -85,11 +160,13 @@ declare namespace ennuizel {
 
         interface AudioTrack extends Track {
             /**
-             * Append data from a stream of raw data chunks. The type of the chunks
-             * must correspond to the format specified in the format field.
-             * @param stream  The stream to read from.
+             * Append data from a stream of raw data. The chunks must be LibAVFrames.
+             * If they don't have the correct format, sample rate, or channel count,
+             * they will be filtered, but this is only applied after the first has
+             * arrived, so the caller can change the track properties before then.
+             * @param rstream  The stream to read from.
              */
-            append(stream: ReadableStream<TypedArray>): Promise<void>;
+            append(rstream: EZStream<LibAVFrame>): Promise<void>;
 
             /**
              * Append a single chunk of raw data.
@@ -125,10 +202,11 @@ declare namespace ennuizel {
              * must give TypedArray chunks, and must be of the same length as is being
              * overwritten. A stream() with keepOpen and an overwrite() with closeTwice
              * creates an effective filter.
+             * @param data  Input data.
              * @param opts  Options. In particular, you can set the start and end time
              *              here.
              */
-            overwrite(data: ReadableStream<TypedArray>, opts?: {
+            overwrite(data: EZStream<LibAVFrame>, opts?: {
                 start?: number;
                 end?: number;
                 closeTwice?: boolean;
@@ -530,6 +608,11 @@ declare namespace ennuizel {
          * web-streams-polyfill's ReadableStream.
          */
         readonly ReadableStream: typeof ReadableStream;
+
+        /**
+         * And our own EZStream.
+         */
+        readonly EZStream: typeof EZStream;
 
         /**
          * The filter interface.

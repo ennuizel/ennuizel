@@ -14,6 +14,9 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+// extern
+declare let LibAV: any;
+
 import * as avthreads from "./avthreads";
 import * as id36 from "./id36";
 import * as select from "./select";
@@ -38,6 +41,49 @@ type TypedArray =
  */
 export enum LibAVSampleFormat {
     U8 = 0, S16, S32, FLT, DBL, U8P, S16P, S32P, FLTP, DBLP, S64, S64P
+}
+
+/**
+ * The frame format given by libav.js
+ */
+export interface LibAVFrame {
+    /**
+     * The actual data. Note that in real libav.js frames, this could be an
+     * array of typed arrays, if it's planar, but Ennuizel only handles
+     * non-planar data.
+     */
+    data: TypedArray;
+
+    /**
+     * The sample rate.
+     */
+    sample_rate: number;
+
+    /**
+     * The sample format.
+     */
+    format: number;
+
+    /**
+     * The number of channels. Either this or channel_layout should be set.
+     */
+    channels?: number;
+
+    /**
+     * The layout of the channels. Either this or channels should be set.
+     */
+    channel_layout?: number;
+
+    /**
+     * The number of samples. This does not have to be set, and can be divined
+     * from the length of data.
+     */
+    nb_samples?: number;
+
+    /**
+     * Not part of original libav.js, but provided by streams for tracks.
+     */
+    node?: AudioData;
 }
 
 const log2 = Math.log(2);
@@ -102,6 +148,121 @@ export function fromPlanar(format: number): number {
         default:
             throw new Error("Unsupported format (to planar) " + format);
     }
+}
+
+/**
+ * Convert a number of channels to a channel layout.
+ */
+export function toChannelLayout(channels: number) {
+    if (channels === 1)
+        return 4;
+    else
+        return (1<<channels) - 1;
+}
+
+/**
+ * Sanitize this libav.js frame, by setting any missing fields.
+ */
+export function sanitizeLibAVFrame(frame: LibAVFrame) {
+    if (typeof frame.channels !== "number") {
+        if (typeof frame.channel_layout !== "number") {
+            // BAD! One should be set!
+            frame.channels = 1;
+        } else {
+            let l = frame.channel_layout;
+            let c = 0;
+            while (l) {
+                if (l&1) c++;
+                l >>>= 1;
+            }
+            frame.channels = c;
+        }
+    }
+
+    if (typeof frame.channel_layout !== "number")
+        frame.channel_layout = toChannelLayout(frame.channels);
+
+    if (typeof frame.nb_samples !== "number")
+        frame.nb_samples = ~~(frame.data.length / frame.channels);
+}
+
+/**
+ * Convert this LibAVFrame stream to the desired sample rate, format, and
+ * channel count.
+ * @param stream  Input LibAVFrame stream.
+ * @param sampleRate  Desired sample rate.
+ * @param format  Desired sample format.
+ * @param channels  Desired channel count.
+ */
+async function resample(
+    stream: EZStream<LibAVFrame>, sampleRate: number, format: number,
+    channels: number
+): Promise<ReadableStream<LibAVFrame>> {
+    const first: LibAVFrame = await stream.read();
+
+    if (!first) {
+        // No need to filter nothing!
+        return new WSPReadableStream<LibAVFrame>({
+            start(controller) {
+                controller.close();
+            }
+        });
+    }
+
+    stream.push(first);
+
+    // Do we need to filter?
+    sanitizeLibAVFrame(first);
+    if (first.sample_rate === sampleRate &&
+        first.format === format &&
+        first.channels === channels) {
+        // Nope, already good!
+        return new WSPReadableStream<LibAVFrame>({
+            async pull(controller) {
+                const chunk = await stream.read();
+                if (chunk)
+                    controller.enqueue(chunk);
+                else
+                    controller.close();
+            }
+        });
+    }
+
+    // OK, make the filter
+    const libav = await LibAV.LibAV();
+    const [, buffersrc_ctx, buffersink_ctx] =
+        await libav.ff_init_filter_graph({
+            sample_rate: first.sample_rate,
+            sample_fmt: first.format,
+            channel_layout: first.channel_layout
+        }, {
+            sample_rate: this.sampleRate,
+            sample_fmt: this.format,
+            channel_layout: this.channel_layout
+        });
+
+    // And the stream
+    return new WSPReadableStream<LibAVFrame>({
+        async pull(controller) {
+            while (true) {
+                const chunk = await stream.read();
+
+                const fframes = await libav.ff_filter_multi(buffersrc_ctx,
+                    buffersink_ctx, chunk ? [chunk] : [], !chunk);
+
+                for (const frame of fframes)
+                    controller.enqueue(frame);
+
+                if (!chunk) {
+                    controller.close();
+                    libav.terminate();
+                }
+
+                if (!chunk || fframes.length)
+                    break;
+            }
+        }
+    });
 }
 
 /**
@@ -233,18 +394,32 @@ export class AudioTrack implements track.Track {
     }
 
     /**
-     * Append data from a stream of raw data chunks. The type of the chunks
-     * must correspond to the format specified in the format field.
+     * Append data from a stream of raw data. The chunks must be LibAVFrames.
+     * If they don't have the correct format, sample rate, or channel count,
+     * they will be filtered, but this is only applied after the first has
+     * arrived, so the caller can change the track properties before then.
      * @param rstream  The stream to read from.
      */
-    async append(rstream: ReadableStream<TypedArray>) {
-        const stream = new EZStream(rstream);
+    async append(rstream: EZStream<LibAVFrame>) {
         const store = this.project.store;
+
+        // Get the first data just to give them a chance to set up this track
+        {
+            const first = await rstream.read();
+            if (first)
+                rstream.push(first);
+        }
+
+        // Perhaps resample
+        const stream = new EZStream(
+            await resample(rstream, this.sampleRate, this.format,
+                this.channels)
+        );
 
         // Current AudioData we're appending to
         let cur: AudioData = null, raw: TypedArray;
 
-        let chunk: TypedArray;
+        let chunk: LibAVFrame;
         while ((chunk = await stream.read()) !== null) {
             if (!cur) {
                 // Append a new audio chunk to the tree
@@ -268,23 +443,25 @@ export class AudioTrack implements track.Track {
                 }
 
                 // Allocate space
-                raw = await cur.initRaw(chunk);
+                raw = await cur.initRaw(chunk.data);
                 await cur.save();
             }
 
             const remaining = raw.length - cur.len;
 
-            if (remaining >= chunk.length) {
+            if (remaining >= chunk.data.length) {
                 // There's enough space for this chunk in full
-                raw.set(chunk, cur.len);
-                cur.len += chunk.length;
+                raw.set(chunk.data, cur.len);
+                cur.len += chunk.data.length;
 
             } else {
                 // Need to take part of the chunk
-                raw.set(chunk.subarray(0, remaining), cur.len);
+                raw.set(chunk.data.subarray(0, remaining), cur.len);
                 cur.len = raw.length;
-                if (chunk.length !== remaining)
-                    stream.push(chunk.slice(remaining));
+                if (chunk.data.length !== remaining) {
+                    chunk.data = chunk.data.subarray(remaining);
+                    stream.push(chunk);
+                }
                 await cur.closeRaw(true);
                 cur = null;
                 raw = null;
@@ -310,12 +487,12 @@ export class AudioTrack implements track.Track {
      * @param data  The single chunk of data.
      */
     async appendRaw(data: TypedArray) {
-        const stream = new WSPReadableStream({
+        const stream = new EZStream(new WSPReadableStream({
             start(controller) {
                 controller.enqueue(data);
                 controller.close();
             }
-        });
+        }));
         await this.append(stream);
     }
 
@@ -348,7 +525,7 @@ export class AudioTrack implements track.Track {
         start?: number,
         end?: number,
         keepOpen?: boolean
-    } = {}): ReadableStream<any> {
+    } = {}): ReadableStream<LibAVFrame> {
         // Calculate times
         const startSec = (typeof opts.start === "number") ? opts.start : 0;
         const endSec = (typeof opts.end === "number") ? opts.end : this.duration() + 2;
@@ -458,16 +635,15 @@ export class AudioTrack implements track.Track {
      * must give TypedArray chunks, and must be of the same length as is being
      * overwritten. A stream() with keepOpen and an overwrite() with closeTwice
      * creates an effective filter.
+     * @param data  Input data.
      * @param opts  Options. In particular, you can set the start and end time
      *              here.
      */
-    async overwrite(data: ReadableStream<TypedArray>, opts: {
+    async overwrite(data: EZStream<LibAVFrame>, opts: {
         start?: number,
         end?: number,
         closeTwice?: boolean
     } = {}) {
-        const dataRd = data.getReader();
-
         // We have two streams, so we need to coordinate both of them
         let curOutNode: AudioData = null;
         let curOutRaw: TypedArray = null;
@@ -476,6 +652,11 @@ export class AudioTrack implements track.Track {
         let curInRaw: TypedArray = null;
         let curInPos = 0;
         let curInRem = 0;
+
+        // Resample the data if needed
+        const stream = await resample(data, this.sampleRate, this.format,
+            this.channels);
+        const dataRd = stream.getReader();
 
         /* The stream we're overwriting is actually an *input* stream; it gives
          * us a raw view into the buffer */
@@ -514,7 +695,7 @@ export class AudioTrack implements track.Track {
                     }
                     break;
                 }
-                curInRaw = curIn.value;
+                curInRaw = curIn.value.data;
                 curInPos = 0;
                 curInRem = curInRaw.length;
             }

@@ -23,7 +23,7 @@ import * as filters from "./filters";
 import * as hotkeys from "./hotkeys";
 import * as project from "./project";
 import * as select from "./select";
-import { WSPReadableStream } from "./stream";
+import { EZStream, WSPReadableStream } from "./stream";
 import * as track from "./track";
 import * as ui from "./ui";
 import * as util from "./util";
@@ -50,6 +50,7 @@ export async function load() {
         getPlugin,
 
         ReadableStream: WSPReadableStream,
+        EZStream,
 
         filters,
         util,

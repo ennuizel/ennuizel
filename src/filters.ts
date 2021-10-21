@@ -21,7 +21,7 @@ import * as audioData from "./audio-data";
 import * as hotkeys from "./hotkeys";
 import * as id36 from "./id36";
 import * as select from "./select";
-import { WSPReadableStream } from "./stream";
+import { EZStream, WSPReadableStream } from "./stream";
 import * as track from "./track";
 import * as ui from "./ui";
 
@@ -380,7 +380,7 @@ export async function ffmpegFilterString(
                     // Write it out
                     if (outp.length) {
                         for (const part of outp) {
-                            controller.enqueue(part.data);
+                            controller.enqueue(part);
                         }
                     }
 
@@ -405,13 +405,14 @@ export async function ffmpegFilterString(
                 }
             );
 
-            await newTrack.append(filterStream);
+            await newTrack.append(new EZStream(filterStream));
 
             await track.replace(sel.range ? sel.start : 0, sel.range ? sel.end : Infinity, newTrack);
 
         } else {
             // Just overwrite it
-            await track.overwrite(filterStream, Object.assign({closeTwice: true}, streamOpts));
+            await track.overwrite(new EZStream(filterStream),
+                Object.assign({closeTwice: true}, streamOpts));
 
         }
 
@@ -571,7 +572,7 @@ export async function mixTracks(
                 // Write it out
                 if (outp.length) {
                     for (const part of outp) {
-                        controller.enqueue(part.data);
+                        controller.enqueue(part);
                         mixed += part.nb_samples / outTrack.sampleRate;
                     }
                     showStatus();
@@ -588,7 +589,7 @@ export async function mixTracks(
     });
 
     // Append that to the new track
-    await outTrack.append(mixStream);
+    await outTrack.append(new EZStream(mixStream));
 
     // And get rid of the libav instance
     libav.terminate();
