@@ -260,6 +260,19 @@ declare namespace ennuizel {
 
         interface Filters {
             /**
+             * Create a stream to apply the given libav filter, described by a filter
+             * string.
+             * @param stream  The input stream.
+             * @param fs  The filter string.
+             * @param status  Callback to inform the host of the status of filtering,
+             *                optional.
+             */
+            ffmpegStream(
+                stream: EZStream<LibAVFrame>, fs: string,
+                status?: (x:number) => Promise<void>
+            ): Promise<ReadableStream<LibAVFrame>>;
+
+            /**
              * Apply an FFmpeg filter, given a filter string.
              * @param fs  The filter string.
              * @param changesDuration  Set if this filter changes duration, so the process
@@ -286,8 +299,12 @@ declare namespace ennuizel {
              */
             mixTracks(
                 sel: select.Selection, d: ui.Dialog, opts?: {
-                    preFilter?: string,
-                    postFilter?: string
+                    preFilter?:
+                        (x: EZStream<LibAVFrame>) =>
+                        Promise<ReadableStream<LibAVFrame>>,
+                    postFilter?:
+                        (x: EZStream<LibAVFrame>) =>
+                        Promise<ReadableStream<LibAVFrame>>
                 }
             ): Promise<track.Track>;
         }

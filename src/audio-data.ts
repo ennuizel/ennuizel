@@ -230,6 +230,7 @@ async function resample(
 
     // OK, make the filter
     const libav = await LibAV.LibAV();
+    const frame = await libav.av_frame_alloc();
     const [, buffersrc_ctx, buffersink_ctx] =
         await libav.ff_init_filter_graph({
             sample_rate: first.sample_rate,
@@ -246,9 +247,11 @@ async function resample(
         async pull(controller) {
             while (true) {
                 const chunk = await stream.read();
+                if (chunk)
+                    chunk.node = null;
 
                 const fframes = await libav.ff_filter_multi(buffersrc_ctx,
-                    buffersink_ctx, chunk ? [chunk] : [], !chunk);
+                    buffersink_ctx, frame, chunk ? [chunk] : [], !chunk);
 
                 for (const frame of fframes)
                     controller.enqueue(frame);
@@ -261,6 +264,10 @@ async function resample(
                 if (!chunk || fframes.length)
                     break;
             }
+        },
+
+        cancel() {
+            libav.terminate();
         }
     });
 }

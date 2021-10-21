@@ -25,6 +25,10 @@ import { EZStream, WSPReadableStream } from "./stream";
 import * as track from "./track";
 import * as ui from "./ui";
 
+export type FilterFunction =
+    (x:EZStream<audioData.LibAVFrame>) =>
+    Promise<ReadableStream<audioData.LibAVFrame>>;
+
 /**
  * A custom (presumably non-FFmpeg) filter, provided by a plugin.
  */
@@ -266,6 +270,87 @@ const standardFilters: FFmpegFilter[] = (function() {
 const customFilters: CustomFilter[] = [];
 
 /**
+ * Create a stream to apply the given libav filter, described by a filter
+ * string.
+ * @param stream  The input stream.
+ * @param fs  The filter string.
+ * @param status  Callback to inform the host of the status of filtering,
+ *                optional.
+ */
+export async function ffmpegStream(
+    stream: EZStream<audioData.LibAVFrame>, fs: string,
+    status?: (x:number) => Promise<void>
+) {
+    // Get the first piece of data to know the input type
+    const first = await stream.read();
+    if (!first) {
+        // No data!
+        return new WSPReadableStream({
+            start(controller) {
+                controller.close();
+            }
+        });
+    }
+    stream.push(first);
+
+    let time = 0;
+
+    // Make the filter
+    audioData.sanitizeLibAVFrame(first);
+    const libav = await LibAV.LibAV();
+    const frame = await libav.av_frame_alloc();
+    const [, buffersrc_ctx, buffersink_ctx] =
+        await libav.ff_init_filter_graph(fs, {
+            sample_rate: first.sample_rate,
+            sample_fmt: first.format,
+            channel_layout: first.channel_layout
+        }, {
+            sample_rate: first.sample_rate,
+            sample_fmt: first.format,
+            channel_layout: first.channel_layout
+        });
+
+    // And the stream
+    return new WSPReadableStream({
+        async pull(controller) {
+            while (true) {
+                // Get some data
+                const chunk = await stream.read();
+                if (chunk)
+                    chunk.node = null;
+
+                // Filter it
+                const fframes = await libav.ff_filter_multi(buffersrc_ctx,
+                    buffersink_ctx, frame, chunk ? [chunk] : [], !chunk);
+
+                // Send it thru
+                for (const frame of fframes) {
+                    controller.enqueue(frame);
+                }
+
+                if (status && chunk) {
+                    audioData.sanitizeLibAVFrame(chunk);
+                    time += chunk.nb_samples / chunk.sample_rate;
+                    await status(time);
+                }
+
+                if (!chunk) {
+                    controller.close();
+                    libav.terminate();
+                }
+
+                if (!chunk || fframes.length)
+                    break;
+            }
+        },
+
+        cancel() {
+            libav.terminate();
+        }
+    });
+}
+
+/**
  * Apply an FFmpeg filter with the given options.
  * @param filter  The filter and options.
  * @param sel  The selection to filter.
@@ -321,7 +406,7 @@ export async function ffmpegFilterString(
     const status = tracks.map(x => ({
         name: x.name,
         filtered: 0,
-        duration: x.sampleCount()
+        duration: x.duration()
     }));
 
     // Function to show the current status
@@ -336,63 +421,18 @@ export async function ffmpegFilterString(
 
     // The filtering function for each track
     async function filterThread(track: audioData.AudioTrack, idx: number) {
-        // Make a libav instance
-        const libav = await LibAV.LibAV();
-
-        // Make the filter thread
-        const channelLayout = audioData.toChannelLayout(track.channels);
-        const frame = await libav.av_frame_alloc();
-        const [, buffersrc_ctx, buffersink_ctx] =
-            await libav.ff_init_filter_graph(fs, {
-                sample_rate: track.sampleRate,
-                sample_fmt: track.format,
-                channel_layout: channelLayout
-            }, {
-                sample_rate: track.sampleRate,
-                sample_fmt: track.format,
-                channel_layout: channelLayout
-            });
-
         // Input stream
-        const inStream = track.stream(Object.assign({keepOpen: !changesDuration}, streamOpts)).getReader();
+        const inStream = track.stream(
+            Object.assign({keepOpen: !changesDuration}, streamOpts));
 
         // Filter stream
-        const filterStream = new WSPReadableStream({
-            async pull(controller) {
-                while (true) {
-                    // Get some data
-                    const inp = await inStream.read();
-                    if (inp.value)
-                        inp.value.node = null;
-
-                    // Filter it
-                    const outp = await libav.ff_filter_multi(
-                        buffersrc_ctx, buffersink_ctx, frame,
-                        inp.done ? [] : [inp.value], inp.done);
-
-                    // Update the status
-                    if (inp.done)
-                        status[idx].filtered = status[idx].duration;
-                    else
-                        status[idx].filtered += inp.value.data.length;
-                    showStatus();
-
-                    // Write it out
-                    if (outp.length) {
-                        for (const part of outp) {
-                            controller.enqueue(part);
-                        }
-                    }
-
-                    // Maybe end it
-                    if (inp.done)
-                        controller.close();
-
-                    if (outp.length || inp.done)
-                        break;
-                }
+        const filterStream = await ffmpegStream(
+            new EZStream(inStream), fs,
+            async function(time) {
+                status[idx].filtered = time;
+                showStatus();
             }
-        });
+        );
 
         if (changesDuration) {
             // We have to write it to a new track, then copy it over
@@ -415,9 +455,6 @@ export async function ffmpegFilterString(
                 Object.assign({closeTwice: true}, streamOpts));
 
         }
-
-        // And get rid of the libav instance
-        libav.terminate();
     }
 
     // Number of threads to run at once
@@ -453,8 +490,8 @@ export async function ffmpegFilterString(
  */
 export async function mixTracks(
     sel: select.Selection, d: ui.Dialog, opts: {
-        preFilter?: string,
-        postFilter?: string
+        preFilter?: FilterFunction,
+        postFilter?: FilterFunction
     } = {}
 ): Promise<track.Track> {
     // Get the audio tracks
@@ -469,11 +506,8 @@ export async function mixTracks(
     if (d)
         d.box.innerHTML = "Mixing...";
 
-    const preFilter = opts.preFilter || "anull";
-    const postFilter = opts.postFilter || "anull";
-
     // The filter string is complex. First, give each track a name.
-    let fs = tracks.map((x, idx) => "[in" + idx + "]" + preFilter + "[aud" + idx + "]").join(";");
+    let fs = tracks.map((x, idx) => "[in" + idx + "]anull[aud" + idx + "]").join(";");
 
     // Then start mixing them together
     let mtracks = tracks.map((x, idx) => "aud" + idx);
@@ -491,7 +525,7 @@ export async function mixTracks(
 
     // Then mix whatever remains as one
     fs += ";" + mtracks.map(x => "[" + x + "]").join("") +
-        "amix=" + mtracks.length + "," + postFilter + "[out]";
+        "amix=" + mtracks.length + "[out]";
 
     // Make the stream options
     const streamOpts = {
@@ -524,7 +558,7 @@ export async function mixTracks(
     // Make a libav instance
     const libav = await LibAV.LibAV();
 
-    // Make the filter
+    // Make the mix filter
     const frame = await libav.av_frame_alloc();
     const [, buffersrc_ctx, buffersink_ctx] =
         await libav.ff_init_filter_graph(fs, tracks.map(x => ({
@@ -538,7 +572,15 @@ export async function mixTracks(
         });
 
     // Make all the input streams
-    const inStreams = tracks.map(x => x.stream(streamOpts).getReader());
+    let inRStreams = tracks.map(x => x.stream(streamOpts));
+    if (opts.preFilter) {
+        inRStreams = await Promise.all(
+            inRStreams.map(
+                x => opts.preFilter(new EZStream(x))
+            )
+        );
+    }
+    const inStreams = inRStreams.map(x => x.getReader());
 
     // Remember which tracks are done
     const trackDone = tracks.map(() => false);
@@ -588,8 +630,13 @@ export async function mixTracks(
         }
     });
 
+    // Possibly a filtered output stream
+    let outStream: ReadableStream<audioData.LibAVFrame> = null;
+    if (opts.postFilter)
+        outStream = await opts.postFilter(new EZStream(mixStream));
+
     // Append that to the new track
-    await outTrack.append(new EZStream(mixStream));
+    await outTrack.append(new EZStream(outStream || mixStream));
 
     // And get rid of the libav instance
     libav.terminate();

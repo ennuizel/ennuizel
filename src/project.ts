@@ -533,6 +533,10 @@ async function performUndo() {
  * Show the "tracks" menu.
  */
 function tracksMenu() {
+    async function dynaudnorm(x: EZStream<audioData.LibAVFrame>) {
+        return await filters.ffmpegStream(x, "dynaudnorm");
+    }
+
     ui.dialog(async function(d, show) {
         const load = hotkeys.btn(d, "_Load track(s) from file", {className: "row"});
         load.onclick = () => uiLoadFile(d);
@@ -544,10 +548,10 @@ function tracksMenu() {
         mixKeep.onclick = () => uiMix(d, true);
 
         const mixLevel = hotkeys.btn(d, "Mix and le_vel selected tracks", {className: "row"});
-        mixLevel.onclick = () => uiMix(d, false, {preFilter: "dynaudnorm", postFilter: "dynaudnorm"});
+        mixLevel.onclick = () => uiMix(d, false, {preFilter: dynaudnorm, postFilter: dynaudnorm});
 
         const mixLevelKeep = hotkeys.btn(d, "M_ix and level selected tracks into new track", {className: "row"});
-        mixLevelKeep.onclick = () => uiMix(d, true, {preFilter: "dynaudnorm", postFilter: "dynaudnorm"});
+        mixLevelKeep.onclick = () => uiMix(d, true, {preFilter: dynaudnorm, postFilter: dynaudnorm});
 
         show(load);
     }, {
@@ -813,8 +817,8 @@ async function loadFile(fileName: string, raw: Blob, opts: {
  * @param opts  Other mix options.
  */
 function uiMix(d: ui.Dialog, keep: boolean, opts: {
-    preFilter?: string,
-    postFilter?: string
+    preFilter?: filters.FilterFunction,
+    postFilter?: filters.FilterFunction
 } = {}) {
     ui.loading(async function(d) {
         const sel = select.getSelection();
