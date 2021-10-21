@@ -158,6 +158,9 @@ export async function load() {
     hotkeys.registerHotkey(ui.ui.menu.filters, null, "f");
 }
 
+// This really belongs here, but is in audioData because it needs it
+export const resample = audioData.resample;
+
 /**
  * Standard FFmpeg filters.
  */
@@ -274,12 +277,9 @@ const customFilters: CustomFilter[] = [];
  * string.
  * @param stream  The input stream.
  * @param fs  The filter string.
- * @param status  Callback to inform the host of the status of filtering,
- *                optional.
  */
 export async function ffmpegStream(
-    stream: EZStream<audioData.LibAVFrame>, fs: string,
-    status?: (x:number) => Promise<void>
+    stream: EZStream<audioData.LibAVFrame>, fs: string
 ) {
     // Get the first piece of data to know the input type
     const first = await stream.read();
@@ -328,12 +328,6 @@ export async function ffmpegStream(
                     controller.enqueue(frame);
                 }
 
-                if (status && chunk) {
-                    audioData.sanitizeLibAVFrame(chunk);
-                    time += chunk.nb_samples / chunk.sample_rate;
-                    await status(time);
-                }
-
                 if (!chunk) {
                     controller.close();
                     libav.terminate();
@@ -369,20 +363,22 @@ export async function ffmpegFilter(
     }
     fs += filter.args.map(x => (x.name ? x.name + "=" : "") + x.value).join(":");
 
-    await ffmpegFilterString(fs, !!filter.changesDuration, sel, d);
+    await selectionFilter(x => ffmpegStream(x, fs),
+        !!filter.changesDuration, sel, d);
 }
 
 /**
- * Apply an FFmpeg filter, given a filter string.
- * @param fs  The filter string.
+ * Apply a filter function to a selection.
+ * @param ff  The filter function.
  * @param changesDuration  Set if this filter changes duration, so the process
  *                         must use a temporary track.
  * @param sel  The selection to filter.
  * @param d  (Optional) The dialog in which to show the status, if applicable.
  *           This dialog will *not* be closed.
  */
-export async function ffmpegFilterString(
-    fs: string, changesDuration: boolean, sel: select.Selection, d: ui.Dialog
+export async function selectionFilter(
+    ff: FilterFunction, changesDuration: boolean, sel: select.Selection,
+    d: ui.Dialog
 ) {
     // Get the audio tracks
     const tracks = <audioData.AudioTrack[]>
@@ -423,16 +419,26 @@ export async function ffmpegFilterString(
     async function filterThread(track: audioData.AudioTrack, idx: number) {
         // Input stream
         const inStream = track.stream(
-            Object.assign({keepOpen: !changesDuration}, streamOpts));
+            Object.assign({keepOpen: !changesDuration}, streamOpts))
+            .getReader();
+
+        // Status stream
+        const statusStream = new WSPReadableStream({
+            async pull(controller) {
+                const chunk = await inStream.read();
+                if (chunk.done) {
+                    controller.close();
+                } else {
+                    audioData.sanitizeLibAVFrame(chunk.value);
+                    status[idx].filtered += chunk.value.nb_samples / chunk.value.sample_rate;
+                    showStatus();
+                    controller.enqueue(chunk.value);
+                }
+            }
+        });
 
         // Filter stream
-        const filterStream = await ffmpegStream(
-            new EZStream(inStream), fs,
-            async function(time) {
-                status[idx].filtered = time;
-                showStatus();
-            }
-        );
+        const filterStream = await ff(new EZStream(statusStream));
 
         if (changesDuration) {
             // We have to write it to a new track, then copy it over
@@ -447,7 +453,10 @@ export async function ffmpegFilterString(
 
             await newTrack.append(new EZStream(filterStream));
 
-            await track.replace(sel.range ? sel.start : 0, sel.range ? sel.end : Infinity, newTrack);
+            await track.replace(
+                sel.range ? sel.start : 0,
+                sel.range ? sel.end : Infinity,
+                newTrack);
 
         } else {
             // Just overwrite it

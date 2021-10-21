@@ -194,7 +194,7 @@ export function sanitizeLibAVFrame(frame: LibAVFrame) {
  * @param format  Desired sample format.
  * @param channels  Desired channel count.
  */
-async function resample(
+export async function resample(
     stream: EZStream<LibAVFrame>, sampleRate: number, format: number,
     channels: number
 ): Promise<ReadableStream<LibAVFrame>> {

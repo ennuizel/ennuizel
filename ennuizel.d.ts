@@ -260,28 +260,41 @@ declare namespace ennuizel {
 
         interface Filters {
             /**
+             * Convert this LibAVFrame stream to the desired sample rate, format, and
+             * channel count.
+             * @param stream  Input LibAVFrame stream.
+             * @param sampleRate  Desired sample rate.
+             * @param format  Desired sample format.
+             * @param channels  Desired channel count.
+             */
+            resample(
+                stream: EZStream<LibAVFrame>, sampleRate: number,
+                format: number, channels: number
+            ): Promise<ReadableStream<LibAVFrame>>;
+
+            /**
              * Create a stream to apply the given libav filter, described by a filter
              * string.
              * @param stream  The input stream.
              * @param fs  The filter string.
-             * @param status  Callback to inform the host of the status of filtering,
-             *                optional.
              */
             ffmpegStream(
-                stream: EZStream<LibAVFrame>, fs: string,
-                status?: (x:number) => Promise<void>
+                stream: EZStream<LibAVFrame>, fs: string
             ): Promise<ReadableStream<LibAVFrame>>;
 
             /**
-             * Apply an FFmpeg filter, given a filter string.
-             * @param fs  The filter string.
+             * Apply a filter function to a selection.
+             * @param ff  The filter function.
              * @param changesDuration  Set if this filter changes duration, so the process
              *                         must use a temporary track.
              * @param sel  The selection to filter.
              * @param d  (Optional) The dialog in which to show the status, if applicable.
              *           This dialog will *not* be closed.
              */
-            ffmpegFilterString(fs: string, changesDuration: boolean, sel: select.Selection, d: ui.Dialog): Promise<void>;
+            selectionFilter(
+                ff: (x: EZStream<LibAVFrame>) => Promise<ReadableStream<LibAVFrame>>,
+                changesDuration: boolean, sel: select.Selection, d: ui.Dialog
+            ): Promise<void>;
 
             /**
              * Register a custom filter.
