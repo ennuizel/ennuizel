@@ -552,7 +552,7 @@ export class AudioTrack implements track.Track {
             format: this.format,
             sample_rate: this.sampleRate,
             channels: this.channels,
-            channel_layout: (this.channels === 1) ? 4 : ((1 << this.channels) - 1)
+            channel_layout: toChannelLayout(this.channels)
         };
 
         // Create the stream
@@ -1254,7 +1254,7 @@ export class AudioData {
     private async wavpack(libav: any, raw: TypedArray) {
         const track = this.track;
         const toFormat = toPlanar(track.format);
-        const channel_layout = (track.channels === 1) ? 4 : ((1 << track.channels) - 1);
+        const channel_layout = toChannelLayout(track.channels);
 
         // Prepare the encoder
         const [, c, frame, pkt, frame_size] = await libav.ff_init_encoder("wavpack", {
@@ -1307,7 +1307,7 @@ export class AudioData {
     // Render the waveform for this data
     private async render(libav: any, raw: TypedArray) {
         const track = this.track;
-        const channel_layout = (track.channels === 1) ? 4 : ((1 << track.channels) - 1);
+        const channel_layout = toChannelLayout(track.channels);
         const frame = await libav.av_frame_alloc();
 
         // Convert it to floating-point

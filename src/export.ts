@@ -145,7 +145,7 @@ export async function exportAudio(
 
     // The export function for each track
     async function exportThread(track: audioData.AudioTrack, idx: number) {
-        const channel_layout = (track.channels === 1) ? 4 : ((1<<track.channels)-1);
+        const channel_layout = audioData.toChannelLayout(track.channels);
         const sample_rate = opts.sampleRate || track.sampleRate;
 
         // Figure out the file name

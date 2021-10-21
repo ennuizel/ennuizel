@@ -340,7 +340,7 @@ export async function ffmpegFilterString(
         const libav = await LibAV.LibAV();
 
         // Make the filter thread
-        const channelLayout = (track.channels === 1) ? 4 : ((1<<track.channels)-1);
+        const channelLayout = audioData.toChannelLayout(track.channels);
         const frame = await libav.av_frame_alloc();
         const [, buffersrc_ctx, buffersink_ctx] =
             await libav.ff_init_filter_graph(fs, {
@@ -509,7 +509,7 @@ export async function mixTracks(
             channels: Math.max.apply(Math, tracks.map(x => x.channels))
         }
     );
-    const channelLayout = (outTrack.channels === 1) ? 4 : ((1<<outTrack.channels)-1);
+    const channelLayout = audioData.toChannelLayout(outTrack.channels);
 
     // Figure out the maximum duration
     const duration = Math.max.apply(Math, tracks.map(x => x.duration()));
@@ -530,7 +530,7 @@ export async function mixTracks(
         await libav.ff_init_filter_graph(fs, tracks.map(x => ({
             sample_rate: x.sampleRate,
             sample_fmt: x.format,
-            channel_layout: (x.channels === 1) ? 4 : ((1<<x.channels)-1)
+            channel_layout: audioData.toChannelLayout(x.channels)
         })), {
             sample_rate: outTrack.sampleRate,
             sample_fmt: outTrack.format,

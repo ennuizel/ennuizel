@@ -747,7 +747,7 @@ async function loadFile(fileName: string, raw: Blob, opts: {
                             track.format = audioData.fromPlanar(frames[0].format);
                             track.sampleRate = frames[0].sample_rate;
                             track.channels = frames[0].channels;
-                            const channel_layout = (track.channels === 1) ? 4 : ((1 << track.channels) - 1);
+                            const channel_layout = audioData.toChannelLayout(track.channels);
 
                             [filter_graph, buffersrc_ctx, buffersink_ctx] =
                                 await libav.ff_init_filter_graph("anull", {
