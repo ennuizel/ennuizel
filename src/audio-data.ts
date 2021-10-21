@@ -193,13 +193,13 @@ export function sanitizeLibAVFrame(frame: LibAVFrame) {
  * @param sampleRate  Desired sample rate.
  * @param format  Desired sample format.
  * @param channels  Desired channel count.
+ * @param fs  Optional filter string to perform while resampling.
  */
 export async function resample(
     stream: EZStream<LibAVFrame>, sampleRate: number, format: number,
-    channels: number
+    channels: number, fs: string = "anull"
 ): Promise<ReadableStream<LibAVFrame>> {
     const first: LibAVFrame = await stream.read();
-
     if (!first) {
         // No need to filter nothing!
         return new WSPReadableStream<LibAVFrame>({
@@ -208,7 +208,6 @@ export async function resample(
             }
         });
     }
-
     stream.push(first);
 
     // Do we need to filter?
@@ -232,14 +231,14 @@ export async function resample(
     const libav = await LibAV.LibAV();
     const frame = await libav.av_frame_alloc();
     const [, buffersrc_ctx, buffersink_ctx] =
-        await libav.ff_init_filter_graph({
+        await libav.ff_init_filter_graph(fs, {
             sample_rate: first.sample_rate,
             sample_fmt: first.format,
             channel_layout: first.channel_layout
         }, {
-            sample_rate: this.sampleRate,
-            sample_fmt: this.format,
-            channel_layout: this.channel_layout
+            sample_rate: sampleRate,
+            sample_fmt: format,
+            channel_layout: toChannelLayout(channels)
         });
 
     // And the stream
