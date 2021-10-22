@@ -9,8 +9,10 @@
     --bg-plain: #111;
     --bg-status: #ccc;
     --bg-menu: #103030;
+    --bg-caption: #000;
     --fg: #cff;
     --fg-status: #333;
+    --fg-caption: #ddd;
     --border-plain: #222;
     --link-color: #fcc;
     --link-color-status: #00a;
@@ -298,9 +300,9 @@ label.ez {
     display: inline-block;
     position: absolute;
     top: calc(50% - 0.5em);
-    background-color: #000;
-    color: #fff;
-    border: 2px solid #000;
+    background-color: var(--bg-caption);
+    color: var(--fg-caption);
+    border: 2px solid var(--bg-caption);
 }
 
 .selection-canvas {

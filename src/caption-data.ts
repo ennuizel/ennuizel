@@ -22,6 +22,8 @@ import { EZStream, WSPReadableStream } from "./stream";
 import * as track from "./track";
 import * as ui from "./ui";
 
+import * as webvttParser from "webvtt-parser";
+
 /**
  * Vosk-style caption data.
  */
@@ -454,6 +456,7 @@ class CaptionData {
      * Make the HTML nodes for this data.
      */
     private makeNodes() {
+        let y = 0;
         for (const word of this.data) {
             const node = ui.mk("div", this.track.box, {
                 className: "caption",
@@ -463,9 +466,11 @@ class CaptionData {
             const w = (word.end - word.start) * ui.pixelsPerSecond;
             Object.assign(node.style, {
                 left: "calc(" + x + "px * var(--zoom-wave))",
+                top: y*20 + "px",
                 minWidth: "calc(" + w + "px * var(--zoom-wave))"
             });
             this.nodes.push(node);
+            y = (y+1)%5;
         }
     }
 
@@ -490,4 +495,138 @@ class CaptionData {
      * The HTML nodes corresponding to the data.
      */
     nodes: HTMLElement[];
+}
+
+/**
+ * Convert WebVTT to Vosk-style lines.
+ * @param webvtt  The WebVTT input.
+ */
+function webvttToVosk(webvtt: string) {
+    const parser = new webvttParser.WebVTTParser();
+    const parsed = parser.parse(webvtt).cues;
+
+    // Find the end time, by looking for a timestamp
+    function findEnd(cues: any[], idx: number, def: number) {
+        for (; idx < cues.length; idx++) {
+            const cue = cues[idx];
+            if (cue.type === "timestamp")
+                return cue.value;
+        }
+        return def;
+    }
+
+    // Convert this tree into a VoskWord array
+    function convertTree(
+        into: VoskWord[], cues: any[], groupStart: number, groupEnd: number
+    ) {
+        let start = groupStart;
+        let end = findEnd(cues, 0, groupEnd);
+
+        for (let idx = 0; idx < cues.length; idx++) {
+            const cue = cues[idx];
+            switch (cue.type) {
+                case "text":
+                    into.push({start, end, word: cue.value});
+                    break;
+
+                case "timestamp":
+                    start = cue.value;
+                    end = findEnd(cues, idx + 1, groupEnd);
+                    break;
+
+                case "object":
+                    convertTree(into, cue.children, start, end);
+                    break;
+            }
+        }
+    }
+
+    // Go line by line
+    const ret: VoskWord[][] = [];
+    for (const line of parsed) {
+        const voskLine: VoskWord[] = [];
+        convertTree(voskLine, line.tree.children, line.startTime, line.endTime);
+        ret.push(voskLine);
+    }
+
+    return ret;
+}
+
+/**
+ * Load a caption file into tracks (UI).
+ */
+export async function uiLoadFile(
+    project: {store: store.UndoableStore}, d: ui.Dialog
+) {
+    let res: (x: CaptionTrack[]) => void;
+    const promise = new Promise<CaptionTrack[]>(r => res = r);
+
+    ui.dialog(async function(d, show) {
+        ui.lbl(d.box, "load-file", "Caption file:&nbsp;");
+        const file = ui.mk("input", d.box, {id: "load-file", type: "file"});
+
+        file.onchange = async function() {
+            if (!file.files.length)
+                return;
+
+            await ui.loading(async function(ld) {
+                // Make sure we can undo
+                project.store.undoPoint();
+
+                // Load it, expecting failure
+                try {
+                    res(await loadFile(project, file.files[0].name, file.files[0]));
+                } catch (ex) {
+                    if (ex.stack)
+                        await ui.alert(ex + "<br/>" + ex.stack);
+                    else
+                        await ui.alert(ex + "");
+                    res([]);
+                }
+            }, {
+                reuse: d
+            });
+        };
+
+        show(file);
+
+    }, {
+        reuse: d,
+        closeable: true
+    });
+
+    return await promise;
+}
+
+/**
+ * Load a caption file into tracks.
+ * @param project  Project, just for the store.
+ * @param fileName  The name of the file.
+ * @param raw  The file, as a Blob.
+ */
+async function loadFile(
+    project: {store: store.UndoableStore}, fileName: string, raw: Blob
+) {
+    const text = await raw.text();
+
+    // Check if it's our only supported format
+    if (text.slice(0, 6) !== "WEBVTT")
+        throw new Error("File is not WebVTT");
+
+    // Convert it
+    const vosk = webvttToVosk(text);
+
+    // Make the track
+    const track = new CaptionTrack(
+        await id36.genFresh(project.store, "caption-track-"),
+        project,
+        {name: fileName.replace(/\..*/, "")}
+    );
+
+    // Import it
+    for (const line of vosk)
+        await track.appendRaw(line, {noSave: true});
+    await track.save();
+
+    return [track];
 }

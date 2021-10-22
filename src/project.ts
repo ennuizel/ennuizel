@@ -562,6 +562,12 @@ function tracksMenu() {
         const load = hotkeys.btn(d, "_Load track(s) from file", {className: "row"});
         load.onclick = () => uiLoadFile(d);
 
+        const cload = hotkeys.btn(d, "Load _captions from file", {className: "row"});
+        cload.onclick = async function() {
+            for (const track of await captionData.uiLoadFile(project, d))
+                await project.addTrack(track);
+        };
+
         const mix = hotkeys.btn(d, "Mi_x selected tracks", {className: "row"});
         mix.onclick = () => uiMix(d, false);
 
@@ -610,7 +616,7 @@ function uiLoadFile(d: ui.Dialog) {
                     });
                 } catch (ex) {
                     if (ex.stack)
-                        await ui.alert(ex.stack);
+                        await ui.alert(ex + "<br/>" + ex.stack);
                     else
                         await ui.alert(ex + "");
                     await performUndo();
