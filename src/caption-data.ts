@@ -557,7 +557,7 @@ function webvttToVosk(webvtt: string) {
             const cue = cues[idx];
             switch (cue.type) {
                 case "text":
-                    into.push({start, end, word: cue.value});
+                    into.push({start, end, word: cue.value.trim()});
                     break;
 
                 case "timestamp":
