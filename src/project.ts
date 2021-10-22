@@ -554,15 +554,6 @@ async function performUndo() {
  * Show the "tracks" menu.
  */
 function tracksMenu() {
-    (async function() {
-        const nt = new captionData.CaptionTrack(
-            await id36.genFresh(project.store, "caption-track-"),
-            project
-        );
-        await nt.appendRaw([{word: "hi", start: 10, end: 15}]);
-        await project.addTrack(nt);
-    })();
-
     async function dynaudnorm(x: EZStream<audioData.LibAVFrame>) {
         return await filters.ffmpegStream(x, "dynaudnorm");
     }
