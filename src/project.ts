@@ -294,8 +294,17 @@ function projectMenu() {
             const deleteb = hotkeys.btn(d, "_Delete project", {className: "row"});
             deleteb.onclick = () => uiDeleteProject(d);
 
-            const exp = hotkeys.btn(d, "_Export audio file", {className: "row"});
-            exp.onclick = () => exportt.uiExport(d, project.name);
+            if (project.tracks
+                .filter(x => x.type() === track.TrackType.Audio).length) {
+                const exp = hotkeys.btn(d, "_Export audio file(s)", {className: "row"});
+                exp.onclick = () => exportt.uiExport(d, project.name);
+            }
+
+            if (project.tracks
+                .filter(x => x.type() === track.TrackType.Caption).length) {
+                const exp = hotkeys.btn(d, "Export _caption file(s)", {className: "row"});
+                exp.onclick = () => exportt.uiExportCaption(d, project.name);
+            }
         }
 
         show(newb);

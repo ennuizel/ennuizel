@@ -18,6 +18,7 @@
 declare let LibAV: any;
 
 import * as audioData from "./audio-data";
+import * as captionData from "./caption-data";
 import * as hotkeys from "./hotkeys";
 import * as select from "./select";
 import * as track from "./track";
@@ -318,6 +319,53 @@ export async function exportAudio(
 }
 
 /**
+ * Export selected captions.
+ * @param opts  Export options.
+ * @param sel  The selection to export.
+ * @param d  A dialog in which to show progress, if desired.
+ */
+export async function exportCaption(
+    opts: {prefix: string}, sel: select.Selection, d: ui.Dialog
+) {
+    // Get the caption tracks
+    const tracks = <captionData.CaptionTrack[]>
+        sel.tracks.filter(x => x.type() === track.TrackType.Caption);
+
+    if (tracks.length === 0) {
+        // Easy!
+        return;
+    }
+    const store = tracks[0].project.store;
+
+    if (d)
+        d.box.innerHTML = "Exporting...";
+
+    // For each track
+    for (const track of tracks) {
+        // Figure out the file name
+        const fname = opts.prefix +
+            ((tracks.length > 1) ? "-" + track.name : "") +
+            ".vtt";
+
+        // Convert to WebVTT
+        const vtt = track.toVTT();
+
+        // Convert to Uint8Array
+        const enc = new TextEncoder();
+        const vttu8 = enc.encode(vtt);
+
+        // Get our output writer
+        const writer = streamsaver
+            .createWriteStream(fname, {size: vttu8.length})
+            .getWriter();
+
+        // And stream it out
+        await writer.write(vttu8);
+        await writer.close();
+    }
+}
+
+/**
  * Show the user interface to export audio.
  * @param d  The dialog to reuse.
  * @param name  Name prefix for export.
@@ -346,6 +394,19 @@ export async function uiExport(d: ui.Dialog, name: string) {
         show(first);
     }, {
         closeable: true,
+        reuse: d
+    });
+}
+
+/**
+ * Show the user interface to export captions.
+ * @param d  The dialog to reuse.
+ * @param name  Name prefix for export.
+ */
+export async function uiExportCaption(d: ui.Dialog, name: string) {
+    await ui.loading(async function(d) {
+        await exportCaption({prefix: name}, select.getSelection(), d);
+    }, {
         reuse: d
     });
 }
