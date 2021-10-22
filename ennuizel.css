@@ -289,6 +289,20 @@ label.ez {
     vertical-align: top;
 }
 
+.track-caption-box {
+    display: inline-block;
+    height: 128px;
+}
+
+.caption {
+    display: inline-block;
+    position: absolute;
+    top: calc(50% - 0.5em);
+    background-color: #000;
+    color: #fff;
+    border: 2px solid #000;
+}
+
 .selection-canvas {
     position: absolute;
     left: 0px;

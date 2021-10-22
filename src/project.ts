@@ -19,6 +19,7 @@ declare let LibAV: any;
 
 import * as audio from "./audio";
 import * as audioData from "./audio-data";
+import * as captionData from "./caption-data";
 import * as exportt from "./export";
 import * as filters from "./filters";
 import * as hotkeys from "./hotkeys";
@@ -87,11 +88,26 @@ export class Project {
 
         this.tracks = [];
         for (const [trackType, trackId] of p.tracks) {
-            if (trackType !== track.TrackType.Audio)
-                throw new Error("Unrecognized track type " + trackType);
-            const atrack = new audioData.AudioTrack(trackId, this);
-            await atrack.load();
-            this.addTrack(atrack);
+            switch (trackType) {
+                case track.TrackType.Audio:
+                {
+                    const atrack = new audioData.AudioTrack(trackId, this);
+                    await atrack.load();
+                    await this.addTrack(atrack, {noSave: true});
+                    break;
+                }
+
+                case track.TrackType.Caption:
+                {
+                    const ctrack = new captionData.CaptionTrack(trackId, this);
+                    await ctrack.load();
+                    await this.addTrack(ctrack, {noSave: true});
+                    break;
+                }
+
+                default:
+                    throw new Error("Unrecognized track type " + trackType);
+            }
         }
     }
 
@@ -129,8 +145,11 @@ export class Project {
     /**
      * Add a track that's already been created.
      * @param track  The track to add.
+     * @param opts  Mostly interal options.
      */
-    async addTrack(track: track.Track) {
+    async addTrack(track: track.Track, opts: {
+        noSave?: boolean
+    } = {}) {
         const self = this;
 
         // Set up its info box
@@ -180,6 +199,8 @@ export class Project {
 
         // And add it to the list
         this.tracks.push(track);
+        if (!opts.noSave)
+            await this.save();
     }
 
     /**
@@ -533,6 +554,15 @@ async function performUndo() {
  * Show the "tracks" menu.
  */
 function tracksMenu() {
+    (async function() {
+        const nt = new captionData.CaptionTrack(
+            await id36.genFresh(project.store, "caption-track-"),
+            project
+        );
+        await nt.appendRaw([{word: "hi", start: 10, end: 15}]);
+        await project.addTrack(nt);
+    })();
+
     async function dynaudnorm(x: EZStream<audioData.LibAVFrame>) {
         return await filters.ffmpegStream(x, "dynaudnorm");
     }
@@ -832,7 +862,7 @@ function uiMix(d: ui.Dialog, keep: boolean, opts: {
             return;
 
         // Add the new track
-        project.addTrack(outTrack);
+        await project.addTrack(outTrack);
 
         // And delete the old
         if (!keep) {

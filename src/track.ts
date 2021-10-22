@@ -20,7 +20,8 @@ import * as store from "./store";
  * All supported track types.
  */
 export enum TrackType {
-    Audio = 1
+    Audio = 1,
+    Caption
 }
 
 /**
