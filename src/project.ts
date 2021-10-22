@@ -129,7 +129,8 @@ export class Project {
     }
 
     /**
-     * Create a new audio track. The track is added to the project if it's not temporary.
+     * Create a new audio track. The track is added to the project if it's not
+     * temporary.
      * @param opts  Options for creating the track.
      */
     async newAudioTrack(opts: {name?: string, temp?: boolean} = {}) {
@@ -137,8 +138,26 @@ export class Project {
             await id36.genFresh(this.store, "audio-track-"),
             this, opts
         );
-        if (!opts.temp)
+        if (!opts.temp) {
+            await track.save();
             await this.addTrack(track);
+        }
+        return track;
+    }
+
+    /**
+     * Create a new caption track.
+     * @param opts  Options for creating the track.
+     */
+    async newCaptionTrack(opts: {name?: string, temp?: boolean} = {}) {
+        const track = new captionData.CaptionTrack(
+            await id36.genFresh(this.store, "caption-track-"),
+            this, opts
+        );
+        if (!opts.temp) {
+            await track.save();
+            await this.addTrack(track);
+        }
         return track;
     }
 

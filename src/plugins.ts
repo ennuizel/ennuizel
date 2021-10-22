@@ -73,7 +73,8 @@ export async function load() {
         disableUndo: project.disableUndo,
 
         standardExports: exportt.standardExports,
-        exportAudio: exportt.exportAudio
+        exportAudio: exportt.exportAudio,
+        exportCaption: exportt.exportCaption
     };
 }
 

@@ -129,6 +129,12 @@ declare namespace ennuizel {
         newAudioTrack(opts?: {name?: string, temp?: boolean}): Promise<track.AudioTrack>;
 
         /**
+         * Create a new caption track.
+         * @param opts  Options for creating the track.
+         */
+        newCaptionTrack(opts?: {name?: string, temp?: boolean}): Promise<captions.CaptionTrack>;
+
+        /**
          * Add a track that's already been created.
          * @param track  The track to add.
          */
@@ -142,6 +148,7 @@ declare namespace ennuizel {
         removeTrack(track: track.Track): Promise<void>;
     }
 
+    // Audio tracks
     namespace track {
         /**
          * A unifying track type for all tracks.
@@ -237,6 +244,94 @@ declare namespace ennuizel {
              * Number of channels in this track.
              */
             channels: number;
+        }
+    }
+
+    // Caption tracks
+    namespace captions {
+        /**
+         * Vosk-style caption data.
+         */
+        interface VoskWord {
+            /**
+             * The actual word represented.
+             */
+            word: string;
+
+            /**
+             * Start time.
+             */
+            start: number;
+
+            /**
+             * End time.
+             */
+            end: number;
+
+            /**
+             * Confidence (optional).
+             */
+            conf?: number;
+        }
+
+        /**
+         * A caption track. A CaptionTrack is stored in an array of CaptionDatas, each
+         * of which is a "line" of caption words, associated with their HTML nodes. The
+         * CaptionTrack itself holds a link to the associated AudioTrack by ID, if
+         * there is one. CaptionTracks are stored as caption-track-id.
+         */
+        interface CaptionTrack extends track.Track {
+            /**
+             * Append data from a stream of raw data. The chunks must be arrays of
+             * VoskWords.
+             * @param rstream  The stream to read from.
+             */
+            append(rstream: EZStream<VoskWord[]>): Promise<void>;
+
+            /**
+             * Append a single chunk of raw data.
+             * @param words  The single chunk of data.
+             * @param opts  Other options, really only intended to be used by append.
+             */
+            appendRaw(words: VoskWord[], opts?: {
+                noSave?: boolean;
+            }): Promise<void>;
+
+            /**
+             * Get this data as a ReadableStream. Packets are set as lines (arrays of
+             * VoskWords).
+             * @param opts  Options. In particular, you can set the start and end time
+             *              here.
+             */
+            stream(opts?: {
+                start?: number;
+                end?: number;
+            }): ReadableStream<VoskWord[]>;
+
+            /**
+             * Replace a segment of caption data with the caption data from another
+             * track. The other track will be deleted. Can clip (by not giving a
+             * replacement) or insert (by replacing no time) as well.
+             * @param start  Start time, in seconds.
+             * @param end  End time, in seconds.
+             * @param replacement  Track containing replacement data.
+             */
+            replace(start: number, end: number, replacement: CaptionTrack): Promise<void>;
+
+            /**
+             * Convert this track to WebVTT.
+             */
+            toVTT(): string;
+
+            /**
+             * Display name for this track.
+             */
+            readonly name: string;
+
+            /**
+             * The associated audio track.
+             */
+            readonly audioTrack: string;
         }
     }
 
@@ -758,8 +853,19 @@ declare namespace ennuizel {
          * @param sel  The selection to export.
          * @param d  A dialog in which to show progress, if desired.
          */
-        exportAudio(opts: exportt.ExportOptions, sel: select.Selection, d: ui.Dialog):
-        Promise<void>;
+        exportAudio(
+            opts: exportt.ExportOptions, sel: select.Selection, d: ui.Dialog
+        ): Promise<void>;
+
+        /**
+         * Export selected captions.
+         * @param opts  Export options.
+         * @param sel  The selection to export.
+         * @param d  A dialog in which to show progress, if desired.
+         */
+        exportCaption(
+            opts: {prefix: string}, sel: select.Selection, d: ui.Dialog
+        ): Promise<void>;
     }
 }
 
