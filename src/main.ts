@@ -110,7 +110,7 @@ import * as select from "./select";
 import * as store from "./store";
 import * as ui from "./ui";
 
-import * as streamsaver from "streamsaver";
+import * as streamsaver from "./StreamSaver";
 import * as wsp from "web-streams-polyfill/ponyfill";
 
 /* Ennuizel itself, as interpreted as a plugin, to make the about box easier to
@@ -173,8 +173,7 @@ const ennuizelPlugin: ennuizel.Plugin = {
             await ui.loadLibrary("localforage.min.js");
 
         // StreamSaver.js
-        (<any> streamsaver).mitm = "StreamSaver/mitm.html";
-        (<any> streamsaver).WritableStream = wsp.WritableStream;
+        streamsaver.streamSaver.mitm = "StreamSaver/mitm.html";
 
         /* The technique to get persistence (which also implies larger/no
          * quota) is complicated. On Firefox, if you request persitence, it

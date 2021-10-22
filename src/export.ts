@@ -24,7 +24,7 @@ import * as select from "./select";
 import * as track from "./track";
 import * as ui from "./ui";
 
-import * as streamsaver from "streamsaver";
+import * as streamsaver from "./StreamSaver";
 
 /**
  * Format options for exporting.
@@ -275,7 +275,7 @@ export async function exportAudio(
         }
 
         // Get our output writer
-        const writer = streamsaver
+        const writer = streamsaver.streamSaver
             .createWriteStream(fname, {size: fileLen})
             .getWriter();
 
@@ -355,7 +355,7 @@ export async function exportCaption(
         const vttu8 = enc.encode(vtt);
 
         // Get our output writer
-        const writer = streamsaver
+        const writer = streamsaver.streamSaver
             .createWriteStream(fname, {size: vttu8.length})
             .getWriter();
 
