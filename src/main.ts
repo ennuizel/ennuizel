@@ -73,36 +73,27 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 ===
-StreamSaver (https://github.com/jimmywarting/StreamSaver.js)
+FileSaver (https://github.com/eligrey/FileSaver.js/)
 ===
 
-The MIT License (MIT)
+The MIT License
 
-Copyright (c) 2016-2021 Jimmy Karl Roland Wärting
+Copyright © 2016 [Eli Grey][1].
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+  [1]: http://eligrey.com
 `;
 
 // extern
 declare let LibAV: any, localforage: any;
 
 import * as avthreads from "./avthreads";
+import * as downloadStream from "./download-stream";
 import * as filters from "./filters";
 import * as plugins from "./plugins";
 import * as project from "./project";
@@ -110,7 +101,6 @@ import * as select from "./select";
 import * as store from "./store";
 import * as ui from "./ui";
 
-import * as streamsaver from "./StreamSaver";
 import * as wsp from "web-streams-polyfill/ponyfill";
 
 /* Ennuizel itself, as interpreted as a plugin, to make the about box easier to
@@ -172,9 +162,6 @@ const ennuizelPlugin: ennuizel.Plugin = {
         if (typeof localforage === "undefined")
             await ui.loadLibrary("localforage.min.js");
 
-        // StreamSaver.js
-        streamsaver.streamSaver.mitm = "StreamSaver/mitm.html";
-
         /* The technique to get persistence (which also implies larger/no
          * quota) is complicated. On Firefox, if you request persitence, it
          * will simply pop up a dialog asking the user for persistence. On
@@ -204,6 +191,7 @@ const ennuizelPlugin: ennuizel.Plugin = {
 
         // Load all the components that need loading
         await avthreads.load();
+        await downloadStream.load();
         await filters.load();
         await project.load();
         await select.load();

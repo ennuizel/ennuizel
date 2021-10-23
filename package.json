@@ -17,8 +17,10 @@
   },
   "homepage": "https://github.com/Yahweasel/ennuizel#readme",
   "dependencies": {
+    "@types/file-saver": "^2.0.3",
     "browserify": "^17.0.0",
     "bytes": "^3.1.0",
+    "file-saver": "^2.0.5",
     "localforage": "^1.10.0",
     "tinyify": "^3.0.0",
     "tsify": "^5.0.4",

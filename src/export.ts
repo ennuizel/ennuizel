@@ -19,12 +19,12 @@ declare let LibAV: any;
 
 import * as audioData from "./audio-data";
 import * as captionData from "./caption-data";
+import * as downloadStream from "./download-stream";
 import * as hotkeys from "./hotkeys";
 import * as select from "./select";
+import { WSPReadableStream } from "./stream";
 import * as track from "./track";
 import * as ui from "./ui";
-
-import * as streamsaver from "./StreamSaver";
 
 /**
  * Format options for exporting.
@@ -274,24 +274,29 @@ export async function exportAudio(
             cache = null;
         }
 
-        // Get our output writer
-        const writer = streamsaver.streamSaver
-            .createWriteStream(fname, {size: fileLen})
-            .getWriter();
-
-        // And stream it out
+        // Make our data stream
         const lastNum = ~~(fileLen / bufLen);
         const lastLen = fileLen % bufLen;
-        for (let i = 0; i <= lastNum; i++) {
-            const storeName = "export-" + fname + "-" + i;
-            const part = await store.getItem(storeName);
-            if (i === lastNum)
-                await writer.write(part.subarray(0, lastLen));
-            else
-                await writer.write(part);
-            await store.removeItem(storeName);
-        }
-        await writer.close();
+        let eidx = 0;
+        const exportStream = new WSPReadableStream({
+            async pull(controller) {
+                const storeName = "export-" + fname + "-" + eidx;
+                const part = await store.getItem(storeName);
+                await store.removeItem(storeName);
+                if (eidx === lastNum) {
+                    controller.enqueue(part.subarray(0, lastLen));
+                    controller.close();
+                } else {
+                    controller.enqueue(part);
+                }
+                eidx++;
+            }
+        });
+
+        // And stream it out
+        await downloadStream.stream(fname, exportStream, {
+            "content-length": fileLen + ""
+        });
     }
 
     // Number of threads to run at once
@@ -350,18 +355,20 @@ export async function exportCaption(
         // Convert to WebVTT
         const vtt = track.toVTT();
 
-        // Convert to Uint8Array
+        // Convert to Uint8Array stream
         const enc = new TextEncoder();
         const vttu8 = enc.encode(vtt);
-
-        // Get our output writer
-        const writer = streamsaver.streamSaver
-            .createWriteStream(fname, {size: vttu8.length})
-            .getWriter();
+        const stream = new WSPReadableStream({
+            start(controller) {
+                controller.enqueue(vttu8);
+                controller.close();
+            }
+        });
 
         // And stream it out
-        await writer.write(vttu8);
-        await writer.close();
+        await downloadStream.stream(fname, stream, {
+            "content-length": vttu8.length + ""
+        });
     }
 }
 
