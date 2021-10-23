@@ -117,17 +117,25 @@ export async function stream(
     if (serviceWorker) {
         // Try to stream via the service worker
         const url = scope + Math.random() + Math.random() + Math.random() + "/" + name;
-        await swPostMessage({c: "stream", u: url, h: headers});
-        const iframe = document.createElement("iframe");
-        iframe.src = url;
-        iframe.style.display = "none";
-        document.body.appendChild(iframe);
 
-        // Wait for it to work
+        // If the service worker has vanished, it won't work
         let worked = await Promise.race([
-            swPostMessage({c: "wait-start", u: url}).then(() => true),
-            (new Promise(res => setTimeout(res, 1000))).then(() => false)
+            swPostMessage({c: "stream", u: url, h: headers}).then(() => true),
+            (new Promise(res => setTimeout(res, 5000))).then(() => false)
         ]);
+
+        if (worked) {
+            const iframe = document.createElement("iframe");
+            iframe.src = url;
+            iframe.style.display = "none";
+            document.body.appendChild(iframe);
+
+            // Make sure it actually starts downloading
+            worked = await Promise.race([
+                swPostMessage({c: "wait-start", u: url}).then(() => true),
+                (new Promise(res => setTimeout(res, 5000))).then(() => false)
+            ]);
+        }
 
         if (worked) {
             // Send it via the worker
