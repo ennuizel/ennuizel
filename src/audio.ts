@@ -48,7 +48,7 @@ export async function getAudioContext() {
         }
 
         // Load in the AWP
-        await ac.audioWorklet.addModule("awp/ennuizel-player.js");
+        await ac.audioWorklet.addModule("ennuizel-player.js");
     }
 
     return ac;
