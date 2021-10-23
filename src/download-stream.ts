@@ -16,6 +16,7 @@
 
 import * as fileSaver from "file-saver";
 
+// The scope for the service worker
 const scope = "/download-stream-service-worker/";
 
 // The registered service worker, if there is one
@@ -124,6 +125,9 @@ export async function stream(
             (new Promise(res => setTimeout(res, 5000))).then(() => false)
         ]);
 
+        if (!worked)
+            console.log("WARNING: Failed to communicate with service worker!");
+
         if (worked) {
             const iframe = document.createElement("iframe");
             iframe.src = url;
@@ -135,6 +139,9 @@ export async function stream(
                 swPostMessage({c: "wait-start", u: url}).then(() => true),
                 (new Promise(res => setTimeout(res, 5000))).then(() => false)
             ]);
+
+            if (!worked)
+                console.log("WARNING: Failed to start service worker download!");
         }
 
         if (worked) {
