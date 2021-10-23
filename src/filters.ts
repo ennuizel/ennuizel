@@ -581,7 +581,12 @@ export async function mixTracks(
         });
 
     // Make all the input streams
-    let inRStreams = tracks.map(x => x.stream(streamOpts));
+    let inRStreams = await Promise.all(
+        tracks.map(
+            x => audioData.resample(new EZStream(x.stream(streamOpts)),
+                x.sampleRate, x.format, x.channels, {reframe: true})
+        )
+    );
     if (opts.preFilter) {
         inRStreams = await Promise.all(
             inRStreams.map(

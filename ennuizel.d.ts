@@ -361,11 +361,14 @@ declare namespace ennuizel {
              * @param sampleRate  Desired sample rate.
              * @param format  Desired sample format.
              * @param channels  Desired channel count.
-             * @param fs  Optional filter string to perform while resampling.
+             * @param opts  Other options.
              */
             resample(
                 stream: EZStream<LibAVFrame>, sampleRate: number,
-                format: number, channels: number, fs?: string
+                format: number, channels: number, opts?: {
+                    fs?: string,
+                    reframe?: boolean
+                }
             ): Promise<ReadableStream<LibAVFrame>>;
 
             /**

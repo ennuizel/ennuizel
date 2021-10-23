@@ -193,11 +193,14 @@ export function sanitizeLibAVFrame(frame: LibAVFrame) {
  * @param sampleRate  Desired sample rate.
  * @param format  Desired sample format.
  * @param channels  Desired channel count.
- * @param fs  Optional filter string to perform while resampling.
+ * @param opts  Other options.
  */
 export async function resample(
     stream: EZStream<LibAVFrame>, sampleRate: number, format: number,
-    channels: number, fs: string = "anull"
+    channels: number, opts: {
+        fs?: string,
+        reframe?: boolean
+    } = {}
 ): Promise<ReadableStream<LibAVFrame>> {
     const first: LibAVFrame = await stream.read();
     if (!first) {
@@ -214,7 +217,9 @@ export async function resample(
     sanitizeLibAVFrame(first);
     if (first.sample_rate === sampleRate &&
         first.format === format &&
-        first.channels === channels) {
+        first.channels === channels &&
+        !opts.fs &&
+        !opts.reframe) {
         // Nope, already good!
         return new WSPReadableStream<LibAVFrame>({
             async pull(controller) {
@@ -231,14 +236,15 @@ export async function resample(
     const libav = await LibAV.LibAV();
     const frame = await libav.av_frame_alloc();
     const [, buffersrc_ctx, buffersink_ctx] =
-        await libav.ff_init_filter_graph(fs, {
+        await libav.ff_init_filter_graph(opts.fs || "anull", {
             sample_rate: first.sample_rate,
             sample_fmt: first.format,
             channel_layout: first.channel_layout
         }, {
             sample_rate: sampleRate,
             sample_fmt: format,
-            channel_layout: toChannelLayout(channels)
+            channel_layout: toChannelLayout(channels),
+            frame_size: ~~(first.sample_rate * 0.2)
         });
 
     // And the stream
