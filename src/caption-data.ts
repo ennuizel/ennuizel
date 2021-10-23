@@ -172,24 +172,26 @@ export class CaptionTrack implements track.Track {
     async append(rstream: EZStream<VoskWord[]>) {
         while (true) {
             const chunk = await rstream.read();
-            await this.appendRaw(chunk);
+            await this.appendRaw([chunk], {noSave: true});
         }
 
         await this.save();
     }
 
     /**
-     * Append a single chunk of raw data.
-     * @param words  The single chunk of data.
+     * Append chunks of raw data.
+     * @param lines  Chunks of data (lines of vosk words).
      * @param opts  Other options, really only intended to be used by append.
      */
-    async appendRaw(words: VoskWord[], opts: {
+    async appendRaw(lines: VoskWord[][], opts: {
         noSave?: boolean
     } = {}) {
         const store = this.project.store;
-        const data = new CaptionData(await id36.genFresh(store, "caption-data-"), this);
-        await data.setData(words);
-        this.data.push(data);
+        for (const line of lines) {
+            const data = new CaptionData(await id36.genFresh(store, "caption-data-"), this);
+            await data.setData(line);
+            this.data.push(data);
+        }
 
         if (!opts.noSave)
             await this.save();
@@ -655,9 +657,7 @@ async function loadFile(
     );
 
     // Import it
-    for (const line of vosk)
-        await track.appendRaw(line, {noSave: true});
-    await track.save();
+    await track.appendRaw(vosk);
 
     return [track];
 }

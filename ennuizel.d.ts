@@ -289,12 +289,12 @@ declare namespace ennuizel {
             append(rstream: EZStream<VoskWord[]>): Promise<void>;
 
             /**
-             * Append a single chunk of raw data.
-             * @param words  The single chunk of data.
+             * Append chunks of raw data.
+             * @param lines  Chunks of data (lines of vosk words).
              * @param opts  Other options, really only intended to be used by append.
              */
-            appendRaw(words: VoskWord[], opts?: {
-                noSave?: boolean;
+            appendRaw(lines: VoskWord[][], opts?: {
+                noSave?: boolean
             }): Promise<void>;
 
             /**
