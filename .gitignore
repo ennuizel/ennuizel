@@ -5,6 +5,5 @@ libav/*.wasm
 localforage.min.js
 node_modules
 package-lock.json
-StreamSaver/
 
 .*.swp
