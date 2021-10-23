@@ -170,11 +170,14 @@ export class CaptionTrack implements track.Track {
      * @param rstream  The stream to read from.
      */
     async append(rstream: EZStream<VoskWord[]>) {
+        const data: VoskWord[][] = [];
         while (true) {
             const chunk = await rstream.read();
-            await this.appendRaw([chunk], {noSave: true});
+            if (!chunk)
+                break;
+            data.push(chunk);
         }
-
+        await this.appendRaw(data);
         await this.save();
     }
 
@@ -187,12 +190,29 @@ export class CaptionTrack implements track.Track {
         noSave?: boolean
     } = {}) {
         const store = this.project.store;
-        for (const line of lines) {
-            const data = new CaptionData(await id36.genFresh(store, "caption-data-"), this);
-            await data.setData(line);
+
+        // Make a single ID to avoid calls to the store
+        const idBase = await id36.genFresh(store, "caption-data-");
+
+        // Do the first line to make sure the ID is saved
+        if (lines.length) {
+            const data = new CaptionData(idBase, this);
+            await data.setData(lines[0]);
             this.data.push(data);
         }
 
+        // Then do the rest in the background
+        const promises: Promise<unknown>[] = [];
+        for (let idx = 1; idx < lines.length; idx++) {
+            const data = new CaptionData(idBase + "-" + idx, this);
+            promises.push(data.setData(lines[idx]));
+            this.data.push(data);
+        }
+
+        // Wait for them to complete
+        await Promise.all(promises);
+
+        // And save the caption track itself
         if (!opts.noSave)
             await this.save();
     }
