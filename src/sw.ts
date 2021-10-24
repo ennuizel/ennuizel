@@ -14,6 +14,36 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+// A page to ping this service worker
+const pinger = `
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+    </head>
+    <body>
+        <script type="text/javascript">(function() {
+            var interval = setInterval(function() {
+                fetch("/download-stream-service-worker/" + Math.random() +
+                    Math.random() + Math.random() +
+                    "/download-stream-service-worker-ping").then(function(f) {
+
+                    return f.text();
+
+                }).then(function(t) {
+                    if (t !== "pong") {
+                        console.log(t);
+                        clearInterval(interval);
+                    }
+
+                }).catch(console.error);
+            }, 5000);
+        })();
+        </script>
+    </body>
+</html>
+`;
+
 interface Stream {
     // Currently buffered chunk
     buf: Uint8Array;
@@ -55,8 +85,14 @@ async function message(port: MessagePort, ev: MessageEvent) {
     const msg = ev.data;
     switch (msg.c) {
         case "setup":
-            // Just ack
-            break;
+            // Ack with our version
+            port.postMessage({c: "ack", i: msg.i, v: 2});
+            return;
+
+        case "ping":
+            // Pong
+            port.postMessage({c: "pong", i: msg.i});
+            return;
 
         case "stream":
             stream(msg);
@@ -131,6 +167,21 @@ async function data(msg: any) {
 self.addEventListener("fetch", (ev: any) => {
     const urlF = new URL(ev.request.url);
     const url = urlF.pathname;
+
+    // Keep the service worker alive with pings
+    if (url.endsWith("/download-stream-service-worker-ping")) {
+        ev.respondWith(new Response("pong", {status: 200}));
+        return;
+    }
+    if (url.endsWith("/download-stream-service-worker-pinger.html")) {
+        ev.respondWith(new Response(pinger, {
+            status: 200,
+            headers: {
+                "content-type": "text/html"
+            }
+        }));
+        return;
+    }
 
     if (!(url in streams)) {
         // No stream!

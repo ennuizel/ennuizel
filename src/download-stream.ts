@@ -32,7 +32,7 @@ let callbacks: Record<number, (x:any) => void> = Object.create(null);
 let callbackNo = 0;
 
 // Send a message to the service worker and expect a response
-async function swPostMessage(msg: any) {
+async function swPostMessage(msg: any): Promise<any> {
     const no = callbackNo++;
     msg.i = no;
     serviceWorkerPort.postMessage(msg);
@@ -52,7 +52,7 @@ export async function load() {
 
             if (!swr || !swr.active) {
                 // We need to register and activate it
-                swr = await navigator.serviceWorker.register("sw.js", {scope});
+                swr = await navigator.serviceWorker.register("sw.js?v=2", {scope});
 
                 if (!swr.installing && !swr.waiting && !swr.active) {
                     // Wait for it to install
@@ -92,8 +92,19 @@ export async function load() {
                 }
             };
 
-            // And ack
-            await swPostMessage({c: "setup"});
+            // Ack it and check its version
+            const ack = await swPostMessage({c: "setup"});
+            if (ack.v !== 2) {
+                await swr.unregister();
+                location.reload();
+                await new Promise(()=>{});
+            }
+
+            // And keep it alive
+            const pinger = document.createElement("iframe");
+            pinger.style.display = "none";
+            pinger.src = scope + "download-stream-service-worker-pinger.html";
+            document.body.appendChild(pinger);
         }
 
     } catch (ex) {
