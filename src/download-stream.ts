@@ -125,12 +125,13 @@ export async function stream(
     headers: Record<string, string>
 ) {
     // Set up the most important header
-    name = encodeURI(name).replace(/%/g, "_");
-    headers["content-disposition"] = `attachment; filename="${name}"`;
+    let utf8Name = encodeURIComponent(name);
+    let safeName = utf8Name.replace(/%/g, "_");
+    headers["content-disposition"] = `attachment; filename="${safeName}"; filename*=UTF-8''${utf8Name}`;
 
     if (serviceWorker) {
         // Try to stream via the service worker
-        const url = scope + Math.random() + Math.random() + Math.random() + "/" + name;
+        const url = scope + Math.random() + Math.random() + Math.random() + "/" + safeName;
 
         // If the service worker has vanished, it won't work
         let worked = await Promise.race([
