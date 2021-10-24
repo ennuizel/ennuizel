@@ -47,7 +47,9 @@ async function swPostMessage(msg: any): Promise<any> {
  */
 export async function load() {
     try {
-        if (navigator.serviceWorker) {
+        if (navigator.serviceWorker &&
+            (navigator.userAgent.indexOf("Safari") < 0 ||
+             navigator.userAgent.indexOf("Chrome") >= 0)) {
             let swr = await navigator.serviceWorker.getRegistration(scope);
 
             if (!swr || !swr.active) {
