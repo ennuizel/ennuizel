@@ -86,7 +86,7 @@ async function message(port: MessagePort, ev: MessageEvent) {
     switch (msg.c) {
         case "setup":
             // Ack with our version
-            port.postMessage({c: "ack", i: msg.i, v: 2});
+            port.postMessage({c: "ack", i: msg.i, v: 3});
             return;
 
         case "ping":
@@ -170,14 +170,21 @@ self.addEventListener("fetch", (ev: any) => {
 
     // Keep the service worker alive with pings
     if (url.endsWith("/download-stream-service-worker-ping")) {
-        ev.respondWith(new Response("pong", {status: 200}));
+        ev.respondWith(new Response("pong", {
+            status: 200,
+            headers: {
+                "content-type": "text/plain",
+                "cross-origin-embedder-policy": "require-corp"
+            }
+        }));
         return;
     }
     if (url.endsWith("/download-stream-service-worker-pinger.html")) {
         ev.respondWith(new Response(pinger, {
             status: 200,
             headers: {
-                "content-type": "text/html"
+                "content-type": "text/html",
+                "cross-origin-embedder-policy": "require-corp"
             }
         }));
         return;

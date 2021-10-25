@@ -25,6 +25,9 @@ let serviceWorker: ServiceWorker = null;
 // The port for communicating with the service worker
 let serviceWorkerPort: MessagePort = null;
 
+// The pinger iframe used to keep the service worker alive
+export let serviceWorkerPinger: HTMLIFrameElement = null;
+
 // Callbacks from the service worker
 let callbacks: Record<number, (x:any) => void> = Object.create(null);
 
@@ -54,7 +57,7 @@ export async function load() {
 
             if (!swr || !swr.active) {
                 // We need to register and activate it
-                swr = await navigator.serviceWorker.register("sw.js?v=2", {scope});
+                swr = await navigator.serviceWorker.register("sw.js?v=3", {scope});
 
                 if (!swr.installing && !swr.waiting && !swr.active) {
                     // Wait for it to install
@@ -96,14 +99,15 @@ export async function load() {
 
             // Ack it and check its version
             const ack = await swPostMessage({c: "setup"});
-            if (ack.v !== 2) {
+            if (ack.v !== 3) {
                 await swr.unregister();
                 location.reload();
                 await new Promise(()=>{});
             }
 
             // And keep it alive
-            const pinger = document.createElement("iframe");
+            const pinger = serviceWorkerPinger =
+                document.createElement("iframe");
             pinger.style.display = "none";
             pinger.src = scope + "download-stream-service-worker-pinger.html";
             document.body.appendChild(pinger);
@@ -124,10 +128,13 @@ export async function stream(
     name: string, body: ReadableStream<Uint8Array>,
     headers: Record<string, string>
 ) {
-    // Set up the most important header
+    // Set up the most important headers
     let utf8Name = encodeURIComponent(name);
     let safeName = utf8Name.replace(/%/g, "_");
-    headers["content-disposition"] = `attachment; filename="${safeName}"; filename*=UTF-8''${utf8Name}`;
+    headers = Object.assign({
+        "content-disposition": `attachment; filename="${safeName}"; filename*=UTF-8''${utf8Name}`,
+        "cross-origin-embedder-policy": "require-corp"
+    }, headers);
 
     if (serviceWorker) {
         // Try to stream via the service worker
