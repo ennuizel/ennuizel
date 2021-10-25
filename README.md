@@ -17,3 +17,6 @@ plugin](https://github.com/ennuizel/ennuizel-better-normalization-plugin) is a
 simple demonstration of how plugins work, and the [Noise Repellent
 plugin](https://github.com/ennuizel/ennuizel-noise-repellent-plugin)
 demonstrates how to integrate non-FFmpeg filters.
+[ennuizel-ennuicastr-plugin](https://github.com/Yahweasel/ennuizel-ennuicastr-plugin)
+connects Ennuizel to Ennuicastr, and serves as en example of how to make a
+wizard.
