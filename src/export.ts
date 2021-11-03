@@ -153,6 +153,7 @@ export async function exportAudio(
         const fname = opts.prefix +
             ((tracks.length > 1 || opts.suffixTrackName) ? "-" + track.name : "") +
             "." + (opts.ext || opts.format);
+        const safeName = "tmp." + (opts.ext || opts.format);
 
         // Make the stream
         const inStream = track.stream(streamOpts).getReader();
@@ -217,7 +218,7 @@ export async function exportAudio(
         });
 
         const [oc] = await libav.ff_init_muxer(
-            {filename: fname, format_name: opts.format, open: true, device: true},
+            {filename: safeName, format_name: opts.format, open: true, device: true},
             [[c, 1, sample_rate]]);
         await libav.avformat_write_header(oc, 0);
 
