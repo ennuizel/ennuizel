@@ -155,7 +155,7 @@ const ennuizelPlugin: ennuizel.Plugin = {
         // libav.js
         if (typeof LibAV === "undefined") {
             LibAV = {base: "libav/"};
-            await ui.loadLibrary("libav/libav-2.4.4.4-fat.js");
+            await ui.loadLibrary("libav/libav-2.5.4.4-fat.js");
         }
 
         // localforage
