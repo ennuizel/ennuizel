@@ -74,6 +74,7 @@ export async function load() {
 
         standardExports: exportt.standardExports,
         exportAudio: exportt.exportAudio,
+        exportAudacity: exportt.exportAudacity,
         exportCaption: exportt.exportCaption
     };
 }

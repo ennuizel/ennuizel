@@ -861,6 +861,16 @@ declare namespace ennuizel {
         ): Promise<unknown>;
 
         /**
+         * Export an Audacity project from this audio.
+         * @param opts  Export options. ext must be ogg.
+         * @param sel  The selection to export.
+         * @param d  A dialog in which to show progress, if desired.
+         */
+        exportAudacity(
+            opts: exportt.ExportOptions, sel: select.Selection, d: ui.Dialog
+        ): Promise<void>;
+
+        /**
          * Export selected captions.
          * @param opts  Export options.
          * @param sel  The selection to export.
