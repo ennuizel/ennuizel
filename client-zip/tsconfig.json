@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "baseUrl": "src",
+    "moduleResolution": "node",
+    "module": "ES2015",
+    "target": "ES2018",
+    "strictFunctionTypes": true,
+    "noImplicitReturns": true,
+    "lib": ["WebWorker", "ES2019", "ES2020"],
+    "paths": {
+      "*.ts": ["*"]
+    }
+  },
+  "include": ["src/*.ts"],
+}

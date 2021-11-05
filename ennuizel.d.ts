@@ -858,7 +858,7 @@ declare namespace ennuizel {
          */
         exportAudio(
             opts: exportt.ExportOptions, sel: select.Selection, d: ui.Dialog
-        ): Promise<void>;
+        ): Promise<unknown>;
 
         /**
          * Export selected captions.
