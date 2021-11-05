@@ -378,7 +378,7 @@ export async function exportAudacity(
     // Make our actual project file
     let aup = `<?xml version="1.0" standalone="no" ?>
 <!DOCTYPE project PUBLIC "-//audacityproject-1.3.0//DTD//EN" "http://audacity.sourceforge.net/xml/audacityproject-1.3.0.dtd" >
-<project xmlns="http://audacity.sourceforge.net/xml/" projname="@PROJNAME@" version="1.3.0" audacityversion="2.2.2" rate="48000.0">
+<project xmlns="http://audacity.sourceforge.net/xml/" projname="${projName}" version="1.3.0" audacityversion="2.2.2" rate="48000.0">
 	<tags/>
 `;
     for (const trackName of trackNames) {
