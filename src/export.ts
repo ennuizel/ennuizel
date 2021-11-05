@@ -366,8 +366,13 @@ export async function exportAudio(
 export async function exportAudacity(
     opts: ExportOptions, sel: select.Selection, d: ui.Dialog
 ) {
+    const tracks = <audioData.AudioTrack[]>
+        sel.tracks.filter(x => x.type() === track.TrackType.Audio);
+    if (tracks.length === 0)
+        return;
+
     const projName = opts.prefix.replace(/[^A-Za-z0-9]/g, "_");
-    const trackNames = sel.tracks.map((x, idx) =>
+    const trackNames = tracks.map((x, idx) =>
         (idx + 1) + "-" + x.name.replace(/[^A-Za-z0-9]/g, "_"));
 
     // Make our actual project file
