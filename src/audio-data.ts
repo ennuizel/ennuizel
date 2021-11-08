@@ -233,9 +233,9 @@ export async function resample(
     }
 
     // OK, make the filter
-    const libav = await LibAV.LibAV();
+    const libav = await avthreads.get();
     const frame = await libav.av_frame_alloc();
-    const [, buffersrc_ctx, buffersink_ctx] =
+    const [filter_graph, buffersrc_ctx, buffersink_ctx] =
         await libav.ff_init_filter_graph(opts.fs || "anull", {
             sample_rate: first.sample_rate,
             sample_fmt: first.format,
@@ -263,7 +263,9 @@ export async function resample(
 
                 if (!chunk) {
                     controller.close();
-                    libav.terminate();
+
+                    await libav.avfilter_graph_free_js(filter_graph);
+                    await libav.av_frame_free_js(frame);
                 }
 
                 if (!chunk || fframes.length)
@@ -271,8 +273,9 @@ export async function resample(
             }
         },
 
-        cancel() {
-            libav.terminate();
+        async cancel() {
+            await libav.avfilter_graph_free_js(filter_graph);
+            await libav.av_frame_free_js(frame);
         }
     });
 }
@@ -491,7 +494,6 @@ export class AudioTrack implements track.Track {
             this.root = this.root.rebalance();
 
         await this.save();
-        await avthreads.flush();
     }
 
     /**
@@ -766,7 +768,6 @@ export class AudioTrack implements track.Track {
         }
 
         await this.save();
-        await avthreads.flush();
     }
 
     /**
@@ -819,7 +820,6 @@ export class AudioTrack implements track.Track {
         startNode.len = startLoc.offset;
         await splitNext.closeRaw(true);
         await startNode.closeRaw(true);
-        await avthreads.flush();
         splitNext.right = startNode.right;
         if (splitNext.right)
             splitNext.right.parent = splitNext;
@@ -912,7 +912,6 @@ export class AudioTrack implements track.Track {
         this.root = AudioData.balanceArray(d);
 
         await this.save();
-        await avthreads.flush();
     }
 
     /**
@@ -1168,41 +1167,41 @@ export class AudioData {
         const self = this;
         let rframes: any[];
 
-        await avthreads.enqueueSync(async function(libav) {
-            // Decompress it. First, read it all in.
-            const wavpack = await self.track.project.store.getItem("audio-data-compressed-" + self.id);
-            if (!wavpack) {
-                // Whoops, make it up!
-                rframes = [{data: new Float32Array(0)}];
-                return;
-            }
-            const fn = "tmp-" + self.id + ".wv"
-            await libav.writeFile(fn, wavpack);
-            const [fmt_ctx, [stream]] = await libav.ff_init_demuxer_file(fn);
-            const [, c, pkt, frame] = await libav.ff_init_decoder(stream.codec_id, stream.codecpar);
-            const [, packets] = await libav.ff_read_multi(fmt_ctx, pkt);
-            const frames = await libav.ff_decode_multi(c, pkt, frame, packets[stream.index], true);
+        const libav = await avthreads.get();
 
-            // Then convert it to a non-planar format
-            const toFormat = fromPlanar(frames[0].format);
-            const [filter_graph, buffersrc_ctx, buffersink_ctx] =
-                await libav.ff_init_filter_graph("anull", {
-                    sample_rate: frames[0].sample_rate,
-                    sample_fmt: frames[0].format,
-                    channel_layout: frames[0].channel_layout
-                }, {
-                    sample_rate: frames[0].sample_rate,
-                    sample_fmt: toFormat,
-                    channel_layout: frames[0].channel_layout
-                });
-            rframes = await libav.ff_filter_multi(buffersrc_ctx, buffersink_ctx, frame, frames, true);
+        // Decompress it. First, read it all in.
+        const wavpack = await self.track.project.store.getItem("audio-data-compressed-" + self.id);
+        if (!wavpack) {
+            // Whoops, make it up!
+            rframes = [{data: new Float32Array(0)}];
+            return;
+        }
+        const fn = "tmp-" + self.id + ".wv";
+        await libav.writeFile(fn, wavpack);
+        const [fmt_ctx, [stream]] = await libav.ff_init_demuxer_file(fn);
+        const [, c, pkt, frame] = await libav.ff_init_decoder(stream.codec_id, stream.codecpar);
+        const [, packets] = await libav.ff_read_multi(fmt_ctx, pkt);
+        const frames = await libav.ff_decode_multi(c, pkt, frame, packets[stream.index], true);
 
-            // Clean up
-            await libav.avfilter_graph_free_js(filter_graph);
-            await libav.ff_free_decoder(c, pkt, frame);
-            await libav.avformat_close_input_js(fmt_ctx);
-            await libav.unlink(fn);
-        });
+        // Then convert it to a non-planar format
+        const toFormat = fromPlanar(frames[0].format);
+        const [filter_graph, buffersrc_ctx, buffersink_ctx] =
+            await libav.ff_init_filter_graph("anull", {
+                sample_rate: frames[0].sample_rate,
+                sample_fmt: frames[0].format,
+                channel_layout: frames[0].channel_layout
+            }, {
+                sample_rate: frames[0].sample_rate,
+                sample_fmt: toFormat,
+                channel_layout: frames[0].channel_layout
+            });
+        rframes = await libav.ff_filter_multi(buffersrc_ctx, buffersink_ctx, frame, frames, true);
+
+        // Clean up
+        await libav.avfilter_graph_free_js(filter_graph);
+        await libav.ff_free_decoder(c, pkt, frame);
+        await libav.avformat_close_input_js(fmt_ctx);
+        await libav.unlink(fn);
 
         // And merge it into a single buffer
         let len = 0;
@@ -1257,13 +1256,14 @@ export class AudioData {
     // Compress and render this data, and store it
     private async compress() {
         if (this.len) {
-            await avthreads.enqueue(libav => this.wavpack(libav, this.raw));
-            await avthreads.enqueue(libav => this.render(libav, this.raw));
+            await this.wavpack(this.raw);
+            await this.render(this.raw);
         }
     }
 
     // wavpack-compress this data
-    private async wavpack(libav: any, raw: TypedArray) {
+    private async wavpack(raw: TypedArray) {
+        const libav = await avthreads.get();
         const track = this.track;
         const toFormat = toPlanar(track.format);
         const channel_layout = toChannelLayout(track.channels);
@@ -1317,7 +1317,8 @@ export class AudioData {
     }
 
     // Render the waveform for this data
-    private async render(libav: any, raw: TypedArray) {
+    private async render(raw: TypedArray) {
+        const libav = await avthreads.get();
         const track = this.track;
         const channel_layout = toChannelLayout(track.channels);
         const frame = await libav.av_frame_alloc();

@@ -475,6 +475,18 @@ declare namespace ennuizel {
         }
     }
 
+    namespace avthreads {
+        /**
+         * Threaded libav access.
+         */
+        interface AVThreads {
+            /**
+             * Get a libav thread.
+             */
+            get(): Promise<any>;
+        }
+    }
+
     namespace util {
         /**
          * Utility functions.
@@ -747,6 +759,11 @@ declare namespace ennuizel {
          * The filter interface.
          */
         readonly filters: filters.Filters;
+
+        /**
+         * libav threading.
+         */
+        readonly avthreads: avthreads.AVThreads;
 
         /**
          * Utility functions.

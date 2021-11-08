@@ -18,6 +18,7 @@
 /// <reference path="../ennuizel.d.ts" />
 
 import * as audioData from "./audio-data";
+import * as avthreads from "./avthreads";
 import * as exportt from "./export";
 import * as filters from "./filters";
 import * as hotkeys from "./hotkeys";
@@ -53,6 +54,7 @@ export async function load() {
         EZStream,
 
         filters,
+        avthreads,
         util,
         hotkeys,
         ui,

@@ -18,6 +18,7 @@
 declare let LibAV: any;
 
 import * as audioData from "./audio-data";
+import * as avthreads from "./avthreads";
 import * as hotkeys from "./hotkeys";
 import * as id36 from "./id36";
 import * as select from "./select";
@@ -297,9 +298,9 @@ export async function ffmpegStream(
 
     // Make the filter
     audioData.sanitizeLibAVFrame(first);
-    const libav = await LibAV.LibAV();
+    const libav = await avthreads.get();
     const frame = await libav.av_frame_alloc();
-    const [, buffersrc_ctx, buffersink_ctx] =
+    const [filter_graph, buffersrc_ctx, buffersink_ctx] =
         await libav.ff_init_filter_graph(fs, {
             sample_rate: first.sample_rate,
             sample_fmt: first.format,
@@ -330,7 +331,8 @@ export async function ffmpegStream(
 
                 if (!chunk) {
                     controller.close();
-                    libav.terminate();
+                    await libav.av_frame_free_js(frame);
+                    await libav.avfilter_graph_free_js(filter_graph);
                 }
 
                 if (!chunk || fframes.length)
@@ -338,8 +340,9 @@ export async function ffmpegStream(
             }
         },
 
-        cancel() {
-            libav.terminate();
+        async cancel() {
+            await libav.av_frame_free_js(frame);
+            await libav.avfilter_graph_free_js(filter_graph);
         }
     });
 }
@@ -565,11 +568,11 @@ export async function mixTracks(
     }
 
     // Make a libav instance
-    const libav = await LibAV.LibAV();
+    const libav = await avthreads.get();
 
     // Make the mix filter
     const frame = await libav.av_frame_alloc();
-    const [, buffersrc_ctx, buffersink_ctx] =
+    const [filter_graph, buffersrc_ctx, buffersink_ctx] =
         await libav.ff_init_filter_graph(fs, tracks.map(x => ({
             sample_rate: x.sampleRate,
             sample_fmt: x.format,
@@ -653,7 +656,8 @@ export async function mixTracks(
     await outTrack.append(new EZStream(outStream || mixStream));
 
     // And get rid of the libav instance
-    libav.terminate();
+    await libav.av_frame_free_js(frame);
+    await libav.avfilter_graph_free_js(filter_graph);
 
     return outTrack;
 }

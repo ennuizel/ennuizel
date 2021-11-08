@@ -18,6 +18,7 @@
 declare let LibAV: any;
 
 import * as audioData from "./audio-data";
+import * as avthreads from "./avthreads";
 import * as captionData from "./caption-data";
 import * as downloadStream from "./download-stream";
 import * as hotkeys from "./hotkeys";
@@ -181,7 +182,7 @@ export async function exportAudio(
         const inStream = track.stream(streamOpts).getReader();
 
         // Get our libav instance
-        const libav = await LibAV.LibAV();
+        const libav = await avthreads.get();
 
         // Prepare for writes
         const bufLen = 1024*1024;
@@ -239,13 +240,13 @@ export async function exportAudio(
             channel_layout
         });
 
-        const [oc] = await libav.ff_init_muxer(
+        const [oc, , pb] = await libav.ff_init_muxer(
             {filename: safeName, format_name: opts.format, open: true, device: true},
             [[c, 1, sample_rate]]);
         await libav.avformat_write_header(oc, 0);
 
         // Prepare the filter
-        const [, buffersrc_ctx, buffersink_ctx] =
+        const [filter_graph, buffersrc_ctx, buffersink_ctx] =
             await libav.ff_init_filter_graph("anull", {
                 sample_rate: track.sampleRate,
                 sample_fmt: track.format,
@@ -289,7 +290,10 @@ export async function exportAudio(
         }
         await libav.av_write_trailer(oc);
         await writePromise;
-        libav.terminate();
+        await libav.ff_free_encoder(c, frame, pkt);
+        await libav.ff_free_muxer(oc, pb);
+        await libav.avfilter_graph_free_js(filter_graph);
+        await libav.unlink(safeName);
 
         // Finish the cache
         if (cacheNum >= 0) {

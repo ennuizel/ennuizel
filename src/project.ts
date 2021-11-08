@@ -19,6 +19,7 @@ declare let LibAV: any;
 
 import * as audio from "./audio";
 import * as audioData from "./audio-data";
+import * as avthreads from "./avthreads";
 import * as captionData from "./caption-data";
 import * as exportt from "./export";
 import * as filters from "./filters";
@@ -686,15 +687,16 @@ async function loadFile(fileName: string, raw: Blob, opts: {
     }
 
     // Create our libav reader
-    const libav = await LibAV.LibAV();
-    await libav.mkreaderdev("tmp.in");
-    await libav.ff_reader_dev_send("tmp.in", header);
-    const [fmt_ctx, streams] = await libav.ff_init_demuxer_file("tmp.in");
+    const libav = await avthreads.get();
+    const fname = "tmp" + Math.random() + Math.random() + Math.random() + ".in";
+    await libav.mkreaderdev(fname);
+    await libav.ff_reader_dev_send(fname, header);
+    const [fmt_ctx, streams] = await libav.ff_init_demuxer_file(fname);
     const pkt = await libav.av_packet_alloc();
     const libavReader = new WSPReadableStream({
         async pull(controller) {
             while (true) {
-                const [res, packets] = await libav.ff_read_multi(fmt_ctx, pkt, "tmp.in", {devLimit: 1024*1024});
+                const [res, packets] = await libav.ff_read_multi(fmt_ctx, pkt, fname, {devLimit: 1024*1024});
                 let done = false;
                 if (packets && Object.keys(packets).length) {
                     controller.enqueue(packets);
@@ -706,7 +708,7 @@ async function loadFile(fileName: string, raw: Blob, opts: {
                     if (!done) {
                         // First we need more data from input!
                         const chunk = await fileReader.read();
-                        await libav.ff_reader_dev_send("tmp.in", chunk.done ? null : chunk.value);
+                        await libav.ff_reader_dev_send(fname, chunk.done ? null : chunk.value);
                     }
 
                 } else if (res === libav.AVERROR_EOF) {
@@ -837,14 +839,14 @@ async function loadFile(fileName: string, raw: Blob, opts: {
                             );
                         }
 
-                        if (rframes.length) {
-                            if (packets.done)
-                                controller.close();
+                        if (rframes.length && !packets.done)
                             break;
-                        }
                     }
 
                     if (packets.done) {
+                        await libav.ff_free_decoder(c, pkt, frame);
+                        if (filter_graph)
+                            await libav.avfilter_graph_free_js(filter_graph);
                         controller.close();
                         break;
                     }
@@ -859,7 +861,9 @@ async function loadFile(fileName: string, raw: Blob, opts: {
     // Now wait for all the tracks
     await Promise.all(trackPromises);
 
-    libav.terminate();
+    await libav.avformat_close_input_js(fmt_ctx);
+    await libav.av_packet_free_js(pkt);
+    await libav.unlink(fname);
 
     // And save it
     await project.save();

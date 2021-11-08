@@ -18,6 +18,7 @@
 declare let LibAV: any;
 
 import * as audioData from "./audio-data";
+import * as avthreads from "./avthreads";
 import * as ui from "./ui";
 
 let ac: AudioContext = null;
@@ -83,9 +84,9 @@ export async function createSource(stream: ReadableStream, opts: {
     }
 
     // Create the filter
-    const libav = await LibAV.LibAV();
+    const libav = await avthreads.get();
     const frame = await libav.av_frame_alloc();
-    const [, buffersrc_ctx, buffersink_ctx] =
+    const [filter_graph, buffersrc_ctx, buffersink_ctx] =
         await libav.ff_init_filter_graph("anull", {
             sample_rate: first.value.sample_rate,
             sample_fmt: first.value.format,
@@ -174,7 +175,10 @@ export async function createSource(stream: ReadableStream, opts: {
         },
         stop() {
             rdr.cancel();
-            libav.terminate();
+            (async function() {
+                await libav.av_frame_free_js(frame);
+                await libav.avfilter_graph_free_js(filter_graph);
+            })();
         }
     };
 }

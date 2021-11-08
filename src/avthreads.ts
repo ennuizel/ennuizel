@@ -17,13 +17,12 @@
 // extern
 declare let LibAV: any;
 
-const threads = navigator.hardwareConcurrency ? navigator.hardwareConcurrency * 2 : 8;
+const threads = navigator.hardwareConcurrency || 2;
 
 // Multiple parallel libav instances
 const libavPromises: Promise<unknown>[] = [];
 const libavs: any[] = [];
-const users: Promise<unknown>[] = [];
-const queue: ((x:any)=>unknown)[] = [];
+let libavCur = 0;
 
 /**
  * Load all our libavs.
@@ -34,86 +33,19 @@ export async function load() {
         libavs.push(null);
         libavPromises.push(LibAV.LibAV().then((libav: any) => libavs[idx] = libav));
     }
-    while (users.length < threads)
-        users.push(null);
 }
 
 /**
- * Enqueue a task. enqueue itself returns when the task *starts* running. The
- * task takes the assigned libav as an argument.
- * @param task  The task to be enqueued.
+ * Get a libav instance.
  */
-export async function enqueue(task: (libav: any) => Promise<unknown>) {
-    while (true) {
-        // Check for any free slots
-        let idx = 0;
-        for (idx = 0; idx < threads; idx++) {
-            if (!users[idx])
-                break;
-        }
+export async function get() {
+    let cur = libavCur;
+    libavCur = (libavCur + 1) % threads;
 
-        // No free slots
-        if (idx >= threads) {
-            await new Promise(res => queue.push(res));
-            continue;
-        }
-
-        // Check that we have a libav
-        let libav = libavs[idx];
-        if (!libav) {
-            await libavPromises[idx];
-            libav = libavs[idx];
-        }
-
-        // OK, take the slot
-        users[idx] = task(libav).then(() => {
-            users[idx] = null;
-            if (queue.length)
-                queue.shift()(null);
-        });
-        break;
+    if (!libavs[cur]) {
+        // Wait for it to be available
+        await libavPromises[cur];
     }
-}
 
-/**
- * Enqueue a task and wait for its completion.
- * @params task  The task.
- */
-export async function enqueueSync(task: (libav: any) => Promise<unknown>) {
-    // Set the promise to wait on
-    let syncRes: (x:any)=>unknown, syncRej: (x:any)=>unknown;
-    const p = new Promise((res, rej) => {
-        syncRes = res;
-        syncRej = rej;
-    });
-
-    // Enqueue as normal
-    enqueue(async function(libav) {
-        // Signal after completion
-        try {
-            await task(libav);
-        } catch (ex) {
-            syncRej(ex);
-            return;
-        }
-        syncRes(null);
-    });
-
-    // Now wait for p
-    await p;
-}
-
-/**
- * Wait for the queue of libav tasks to finish. You should usually do this at
- * the end of any processing, to make sure you don't create race conditions
- * with later processing.
- */
-export async function flush() {
-    // First wait for something, to make sure we empty the queue
-    await new Promise(res => {
-        enqueue(async function() { res(null); });
-    });
-
-    // Then wait for anything remaining
-    await Promise.all(users);
+    return libavs[cur];
 }
