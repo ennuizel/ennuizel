@@ -214,6 +214,7 @@ const ennuizelPlugin: ennuizel.Plugin = {
 
         // Load any plugins specified by the configuration file
         let wizard: (d: ui.Dialog) => Promise<void> = null;
+        let postWizard: (project: project.Project) => Promise<void> = null;
         try {
             const response = await fetch("ennuizel.json", {
                 cache: "no-cache"
@@ -221,11 +222,24 @@ const ennuizelPlugin: ennuizel.Plugin = {
             const config = await response.json();
             for (const url of <string[]> config.plugins) {
                 const plugin = await plugins.loadPlugin(url);
-                if (plugin && plugin.wizard)
-                    wizard = plugin.wizard;
+                if (plugin) {
+                    if (plugin.wizard)
+                        wizard = plugin.wizard;
+                    if (plugin.postWizard)
+                        postWizard = plugin.postWizard;
+                }
             }
         } catch (ex) {
             console.error(ex);
+        }
+
+        /* The visibility of the wizard button depends on the existence of a
+         * post-wizard */
+        if (postWizard) {
+            ui.ui.menu.wizard.style.display = "";
+            ui.ui.menu.wizard.onclick = function() {
+                postWizard(project.project);
+            };
         }
 
         // Run any wizard

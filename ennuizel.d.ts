@@ -719,6 +719,11 @@ declare namespace ennuizel {
         wizard?: (d: ui.Dialog) => Promise<void>;
 
         /**
+         * A wizard to be used *during* normal Ennuizel flow.
+         */
+        postWizard?: (project: Project) => Promise<void>;
+
+        /**
          * The API for your plugin itself, which other plugins can use.
          */
         api?: any;

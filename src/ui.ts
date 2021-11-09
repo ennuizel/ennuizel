@@ -29,6 +29,7 @@ export const ui = {
         edit: <HTMLButtonElement> null,
         tracks: <HTMLButtonElement> null,
         filters: <HTMLButtonElement> null,
+        wizard: <HTMLButtonElement> null,
         zoom: <HTMLButtonElement> null,
         about: <HTMLButtonElement> null
     },
@@ -83,6 +84,7 @@ export function load() {
         edit: gebi("b-edit"),
         tracks: gebi("b-tracks"),
         filters: gebi("b-filters"),
+        wizard: gebi("b-wizard"),
         zoom: gebi("b-zoom"),
         about: gebi("b-about")
     };

@@ -33,7 +33,7 @@ import * as ui from "./ui";
 import * as util from "./util";
 
 // These buttons are disabled when no project is loaded
-const projectButtons = ["edit", "tracks", "filters"];
+const projectButtons = ["edit", "tracks", "filters", "wizard"];
 
 /**
  * An Ennuizel project.
