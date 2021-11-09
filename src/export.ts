@@ -182,7 +182,7 @@ export async function exportAudio(
         const inStream = track.stream(streamOpts).getReader();
 
         // Get our libav instance
-        const libav = await avthreads.get();
+        const libav = await LibAV.LibAV();
 
         // Prepare for writes
         const bufLen = 1024*1024;
@@ -294,6 +294,7 @@ export async function exportAudio(
         await libav.ff_free_muxer(oc, pb);
         await libav.avfilter_graph_free_js(filter_graph);
         await libav.unlink(safeName);
+        libav.terminate();
 
         // Finish the cache
         if (cacheNum >= 0) {
