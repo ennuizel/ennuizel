@@ -31,7 +31,16 @@ export async function load() {
     while (libavs.length < threads) {
         const idx = libavs.length;
         libavs.push(null);
-        libavPromises.push(LibAV.LibAV().then((libav: any) => libavs[idx] = libav));
+        libavPromises.push((async function() {
+            const libav = await LibAV.LibAV();
+            libav.onwriteto = Object.create(null);
+            libav.onwrite = function(name: string, pos: number, buf: Uint8Array) {
+                const handler = libav.onwriteto[name];
+                if (handler)
+                    handler(name, pos, buf);
+            };
+            libavs[idx] = libav;
+        })());
     }
 }
 

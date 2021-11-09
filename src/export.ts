@@ -176,13 +176,14 @@ export async function exportAudio(
         const fname = opts.prefix +
             ((tracks.length > 1 || opts.suffixTrackName) ? "-" + uniqueName(tracks, track) : "") +
             "." + (opts.ext || opts.format);
-        const safeName = "tmp." + (opts.ext || opts.format);
+        const safeName = "tmp" + Math.random() + Math.random() +
+            Math.random() + "." + (opts.ext || opts.format);
 
         // Make the stream
         const inStream = track.stream(streamOpts).getReader();
 
         // Get our libav instance
-        const libav = await LibAV.LibAV();
+        const libav = await avthreads.get();
 
         // Prepare for writes
         const bufLen = 1024*1024;
@@ -191,7 +192,7 @@ export async function exportAudio(
         let cacheName = "";
         let cacheNum = -1;
         let cache: Uint8Array = null;
-        libav.onwrite = function(name: string, pos: number, buf: Uint8Array) {
+        libav.onwriteto[safeName] = function(name: string, pos: number, buf: Uint8Array) {
             writePromise = writePromise.then(() => write(pos, buf));
 
             async function write(pos: number, buf: Uint8Array) {
@@ -294,7 +295,7 @@ export async function exportAudio(
         await libav.ff_free_muxer(oc, pb);
         await libav.avfilter_graph_free_js(filter_graph);
         await libav.unlink(safeName);
-        libav.terminate();
+        delete libav.onwriteto[safeName];
 
         // Finish the cache
         if (cacheNum >= 0) {
