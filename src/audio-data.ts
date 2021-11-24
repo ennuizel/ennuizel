@@ -1263,7 +1263,9 @@ export class AudioData {
 
     // wavpack-compress this data
     private async wavpack(raw: TypedArray) {
-        const libav = await avthreads.get();
+        /* No idea why sharing isn't working here. Presumably there's a bug in
+         * this function, but I haven't found it yet. */
+        const libav = await LibAV.LibAV(); // await avthreads.get();
         const track = this.track;
         const toFormat = toPlanar(track.format);
         const channel_layout = toChannelLayout(track.channels);
@@ -1311,6 +1313,7 @@ export class AudioData {
         // Now it's been converted, so read it
         const u8 = await libav.readFile(this.id + ".wv");
         await libav.unlink(this.id + ".wv");
+        libav.terminate();
 
         // And save it to the store
         await track.project.store.setItem("audio-data-compressed-" + this.id, u8);
