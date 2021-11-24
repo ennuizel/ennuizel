@@ -1345,7 +1345,7 @@ export class AudioData {
         }], true);
 
         await libav.avfilter_graph_free_js(filter_graph);
-        await libav.av_frame_free(frame);
+        await libav.av_frame_free_js(frame);
 
         const data = frameD.data;
 
